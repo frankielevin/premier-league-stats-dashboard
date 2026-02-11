@@ -53,6 +53,36 @@ body {
     background: var(--bg-primary);
     color: var(--text-primary);
     line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Prevent zoom on input focus (iOS) */
+input, select, textarea, button {
+    font-size: 16px;
+}
+
+/* Smooth scrolling for touch devices */
+.stats-grid,
+.compare-stats,
+.dropdown-list,
+.compare-dropdown-list,
+.tabs,
+.compare-tabs {
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Better touch targets */
+@media (hover: none) and (pointer: coarse) {
+    .tab-btn,
+    .compare-tab-btn,
+    .dropdown-item,
+    .compare-dropdown-item,
+    .refresh-btn {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+    }
 }
 
 /* ============================================
@@ -695,23 +725,82 @@ body {
         padding: 12px 16px;
     }
 
+    /* Header mobile layout */
+    .header {
+        flex-direction: column;
+        height: auto;
+        gap: 12px;
+        padding-bottom: 12px;
+    }
+
+    .club-info {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .custom-dropdown {
+        width: 100%;
+    }
+
+    .dropdown-trigger {
+        min-width: unset;
+        width: 100%;
+        font-size: 1.2rem;
+        padding: 10px 16px;
+    }
+
+    .season-badge {
+        align-self: flex-start;
+    }
+
+    .header-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .refresh-btn {
+        padding: 8px 14px;
+        font-size: 0.8rem;
+    }
+
+    .refresh-btn span {
+        display: none;
+    }
+
+    /* Tabs mobile */
     .tabs {
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
+        overflow-x: auto;
         height: auto;
         padding: 8px 0;
+        gap: 6px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .tabs::-webkit-scrollbar {
+        height: 0;
     }
 
     .tab-btn {
         padding: 6px 12px;
         font-size: 0.75rem;
+        flex-shrink: 0;
     }
 
     .tab-btn svg {
         display: none;
     }
 
+    .tab-divider {
+        height: 20px;
+        margin: 0 4px;
+    }
+
+    /* Stats grid mobile */
     .stats-grid {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(2, 1fr);
         gap: 8px;
     }
 
@@ -721,6 +810,106 @@ body {
 
     .stat-value {
         font-size: 1.3rem;
+    }
+
+    .stat-name {
+        font-size: 0.65rem;
+    }
+
+    .rank-bar-container {
+        margin-top: 4px;
+    }
+
+    /* Footer mobile */
+    .footer {
+        font-size: 0.6rem;
+        height: auto;
+        padding: 8px 0;
+    }
+}
+
+/* Extra small screens (phones in portrait) */
+@media (max-width: 480px) {
+    .dashboard {
+        padding: 10px 12px;
+    }
+
+    .dropdown-trigger {
+        font-size: 1rem;
+        padding: 8px 12px;
+        gap: 8px;
+    }
+
+    .dropdown-arrow {
+        width: 16px;
+        height: 16px;
+    }
+
+    .dropdown-item {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+    }
+
+    .season-badge {
+        font-size: 0.6rem;
+        padding: 2px 8px;
+    }
+
+    .last-updated {
+        align-items: flex-start;
+    }
+
+    .update-label {
+        font-size: 0.6rem;
+    }
+
+    .update-time {
+        font-size: 0.85rem;
+    }
+
+    .refresh-btn {
+        padding: 8px 12px;
+    }
+
+    .tab-btn {
+        padding: 5px 10px;
+        font-size: 0.7rem;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+    }
+
+    .stat-card {
+        padding: 8px;
+        border-radius: 8px;
+    }
+
+    .stat-abbrev {
+        font-size: 0.6rem;
+    }
+
+    .rank-badge {
+        font-size: 0.55rem;
+        padding: 1px 6px;
+    }
+
+    .stat-value {
+        font-size: 1.1rem;
+    }
+
+    .stat-name {
+        font-size: 0.6rem;
+    }
+
+    .rank-label {
+        font-size: 0.55rem;
+    }
+
+    .pos-dot {
+        width: 6px;
+        height: 6px;
     }
 }
 
@@ -1478,6 +1667,7 @@ body {
         grid-template-columns: 1fr 1fr;
         grid-template-rows: auto auto;
         gap: 12px;
+        padding: 14px 16px;
     }
 
     .matchup-center {
@@ -1485,7 +1675,7 @@ body {
         grid-row: 1;
         flex-direction: row;
         justify-content: center;
-        gap: 16px;
+        gap: 12px;
     }
 
     .vs-badge {
@@ -1497,6 +1687,11 @@ body {
         font-size: 0.9rem;
     }
 
+    .matchup-category {
+        font-size: 0.65rem;
+        padding: 3px 10px;
+    }
+
     .matchup-team.team-left,
     .matchup-team.team-right {
         align-items: center;
@@ -1504,8 +1699,9 @@ body {
 
     .compare-dropdown-trigger {
         font-size: 0.85rem;
-        min-width: 140px;
-        max-width: 160px;
+        min-width: unset;
+        max-width: unset;
+        width: 100%;
         padding: 8px 12px;
     }
 
@@ -1526,21 +1722,49 @@ body {
         font-size: 2rem;
     }
 
+    .team-score-label {
+        font-size: 0.6rem;
+    }
+
+    .compare-tabs {
+        padding: 3px;
+        gap: 4px;
+    }
+
     .compare-row {
-        grid-template-columns: 1fr 100px 1fr;
+        grid-template-columns: 1fr 90px 1fr;
+        padding: 8px 10px;
+        gap: 6px;
+    }
+
+    .stat-cell {
+        padding: 8px 10px;
     }
 
     .stat-main-value {
         font-size: 1.1rem;
     }
 
-    .stat-name {
+    .stat-rank {
+        font-size: 0.6rem;
+        padding: 1px 6px;
+    }
+
+    .stat-center .stat-name {
         display: none;
     }
 
+    .stat-abbrev {
+        font-size: 0.8rem;
+    }
+
+    .comparison-bar {
+        height: 4px;
+    }
+
     .winner-icon {
-        width: 18px;
-        height: 18px;
+        width: 16px;
+        height: 16px;
     }
 
     .compare-tab-btn svg {
@@ -1548,7 +1772,140 @@ body {
     }
 
     .compare-tab-btn {
-        padding: 8px 14px;
+        padding: 7px 12px;
+        font-size: 0.7rem;
+    }
+}
+
+/* Extra small screens for Compare */
+@media (max-width: 480px) {
+    .compare-view {
+        gap: 8px;
+    }
+
+    .matchup-header {
+        padding: 12px;
+        gap: 10px;
+        border-radius: 12px;
+    }
+
+    .matchup-header::before {
+        height: 2px;
+        border-radius: 12px 12px 0 0;
+    }
+
+    .vs-badge {
+        width: 38px;
+        height: 38px;
+    }
+
+    .vs-text {
+        font-size: 0.8rem;
+    }
+
+    .matchup-category {
+        font-size: 0.55rem;
+        padding: 2px 8px;
+        letter-spacing: 0.1em;
+    }
+
+    .compare-dropdown-trigger {
         font-size: 0.75rem;
+        padding: 6px 10px;
+        border-radius: 8px;
+        gap: 6px;
+    }
+
+    .compare-dropdown-arrow {
+        width: 12px;
+        height: 12px;
+    }
+
+    .compare-dropdown-menu {
+        border-radius: 0 0 8px 8px;
+    }
+
+    .compare-dropdown-search {
+        padding: 10px 12px;
+    }
+
+    .compare-dropdown-search input {
+        font-size: 0.8rem;
+    }
+
+    .compare-dropdown-item {
+        padding: 9px 12px;
+        font-size: 0.8rem;
+    }
+
+    .compare-dropdown-list {
+        max-height: 200px;
+    }
+
+    .team-score {
+        font-size: 1.6rem;
+    }
+
+    .team-score-label {
+        font-size: 0.55rem;
+        letter-spacing: 0.05em;
+    }
+
+    .compare-tabs {
+        border-radius: 8px;
+    }
+
+    .compare-tab-btn {
+        padding: 6px 10px;
+        font-size: 0.65rem;
+        border-radius: 6px;
+    }
+
+    .compare-row {
+        grid-template-columns: 1fr 70px 1fr;
+        padding: 6px 8px;
+        gap: 4px;
+        border-radius: 8px;
+    }
+
+    .stat-cell {
+        padding: 6px 8px;
+        border-radius: 6px;
+    }
+
+    .stat-main-value {
+        font-size: 0.95rem;
+    }
+
+    .stat-rank {
+        font-size: 0.5rem;
+        padding: 1px 4px;
+        border-radius: 6px;
+    }
+
+    .stat-value-wrap {
+        gap: 4px;
+    }
+
+    .stat-abbrev {
+        font-size: 0.7rem;
+        letter-spacing: 0.05em;
+    }
+
+    .comparison-bar {
+        height: 3px;
+    }
+
+    .winner-icon {
+        width: 14px;
+        height: 14px;
+    }
+
+    .compare-content-area {
+        gap: 8px;
+    }
+
+    .compare-stats {
+        gap: 4px;
     }
 }
