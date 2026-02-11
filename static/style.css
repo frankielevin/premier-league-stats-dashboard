@@ -1,0 +1,745 @@
+/* ============================================
+   West Ham United Stats Dashboard
+   Professional Data Visualization Styles
+   ============================================ */
+
+:root {
+    /* West Ham Colors */
+    --claret: #7A263A;
+    --claret-dark: #5C1C2B;
+    --claret-light: #9A3A50;
+    --sky-blue: #1BB1E7;
+    --sky-blue-dark: #0E8FC0;
+
+    /* Rank Colors */
+    --rank-excellent: #10B981;
+    --rank-excellent-bg: rgba(16, 185, 129, 0.15);
+    --rank-good: #3B82F6;
+    --rank-good-bg: rgba(59, 130, 246, 0.15);
+    --rank-average: #F59E0B;
+    --rank-average-bg: rgba(245, 158, 11, 0.15);
+    --rank-poor: #EF4444;
+    --rank-poor-bg: rgba(239, 68, 68, 0.15);
+
+    /* Neutral Colors */
+    --bg-primary: #0F0F13;
+    --bg-secondary: #16161D;
+    --bg-card: #1C1C26;
+    --bg-card-hover: #242430;
+    --text-primary: #FFFFFF;
+    --text-secondary: #9CA3AF;
+    --text-muted: #6B7280;
+    --border-color: rgba(255, 255, 255, 0.08);
+
+    /* Spacing */
+    --header-height: 70px;
+    --tabs-height: 50px;
+    --footer-height: 40px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.4;
+}
+
+/* ============================================
+   Dashboard Layout - Fixed to Viewport
+   ============================================ */
+
+.dashboard {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-height: 100vh;
+    padding: 16px 24px;
+    overflow: hidden;
+}
+
+/* ============================================
+   Header
+   ============================================ */
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: var(--header-height);
+    flex-shrink: 0;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.club-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+/* Custom Team Dropdown */
+.custom-dropdown {
+    position: relative;
+    z-index: 100;
+}
+
+.dropdown-trigger {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 1.5rem;
+    font-weight: 700;
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 300px;
+}
+
+.dropdown-trigger:hover {
+    border-color: var(--claret);
+    background: linear-gradient(135deg, var(--bg-card-hover) 0%, var(--bg-card) 100%);
+}
+
+.custom-dropdown.open .dropdown-trigger {
+    border-color: var(--claret);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.selected-team {
+    flex: 1;
+    text-align: left;
+}
+
+.dropdown-arrow {
+    width: 20px;
+    height: 20px;
+    color: var(--text-secondary);
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+
+.custom-dropdown.open .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--claret);
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s ease;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+.custom-dropdown.open .dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.dropdown-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+}
+
+.dropdown-search svg {
+    width: 18px;
+    height: 18px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.dropdown-search input {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.9rem;
+    outline: none;
+}
+
+.dropdown-search input::placeholder {
+    color: var(--text-muted);
+}
+
+.dropdown-list {
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.dropdown-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.dropdown-list::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+
+.dropdown-list::-webkit-scrollbar-thumb {
+    background: var(--claret);
+    border-radius: 3px;
+}
+
+.dropdown-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+}
+
+.dropdown-item:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+}
+
+.dropdown-item.active {
+    background: linear-gradient(135deg, var(--claret) 0%, var(--claret-dark) 100%);
+    color: white;
+    font-weight: 600;
+}
+
+.club-badge {
+    width: 52px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.badge-icon {
+    width: 100%;
+    height: 100%;
+    color: var(--claret);
+}
+
+.club-text h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.season-badge {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 3px 10px;
+    background: linear-gradient(135deg, var(--claret) 0%, var(--claret-dark) 100%);
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.last-updated {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.update-label {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.update-time {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.refresh-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: linear-gradient(135deg, var(--claret) 0%, var(--claret-dark) 100%);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.refresh-btn:hover {
+    background: linear-gradient(135deg, var(--claret-light) 0%, var(--claret) 100%);
+    transform: translateY(-1px);
+}
+
+.refresh-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.refresh-btn .refresh-icon {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.3s ease;
+}
+
+.refresh-btn.loading .refresh-icon {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   Navigation Tabs
+   ============================================ */
+
+.tabs {
+    display: flex;
+    gap: 8px;
+    height: var(--tabs-height);
+    padding: 10px 0;
+    flex-shrink: 0;
+}
+
+.tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tab-btn svg {
+    width: 16px;
+    height: 16px;
+    opacity: 0.7;
+}
+
+.tab-btn:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.tab-btn.active {
+    background: linear-gradient(135deg, var(--claret) 0%, var(--claret-dark) 100%);
+    border-color: var(--claret);
+    color: white;
+}
+
+.tab-btn.active svg {
+    opacity: 1;
+}
+
+/* ============================================
+   Loading State
+   ============================================ */
+
+.loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    z-index: 10;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--claret);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.loading p {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+/* ============================================
+   Stats Grid - Core Visualization
+   ============================================ */
+
+.stats-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    padding: 12px 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    transition: opacity 0.3s ease;
+}
+
+/* Custom scrollbar */
+.stats-grid::-webkit-scrollbar {
+    width: 6px;
+}
+
+.stats-grid::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+    border-radius: 3px;
+}
+
+.stats-grid::-webkit-scrollbar-thumb {
+    background: var(--claret);
+    border-radius: 3px;
+}
+
+/* ============================================
+   Stat Cards
+   ============================================ */
+
+.stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s ease;
+}
+
+.stat-card.animate-in {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.stat-card:hover {
+    background: var(--bg-card-hover);
+    border-color: rgba(255, 255, 255, 0.12);
+    transform: translateY(-2px);
+}
+
+/* Card header with abbreviation and rank badge */
+.stat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.stat-abbrev {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.rank-badge {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.65rem;
+    font-weight: 700;
+}
+
+/* Rank-based badge colors */
+.rank-excellent .rank-badge {
+    background: var(--rank-excellent-bg);
+    color: var(--rank-excellent);
+}
+
+.rank-good .rank-badge {
+    background: var(--rank-good-bg);
+    color: var(--rank-good);
+}
+
+.rank-average .rank-badge {
+    background: var(--rank-average-bg);
+    color: var(--rank-average);
+}
+
+.rank-poor .rank-badge {
+    background: var(--rank-poor-bg);
+    color: var(--rank-poor);
+}
+
+/* Main stat value */
+.stat-value {
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+}
+
+.rank-excellent .stat-value { color: var(--rank-excellent); }
+.rank-good .stat-value { color: var(--rank-good); }
+.rank-average .stat-value { color: var(--rank-average); }
+.rank-poor .stat-value { color: var(--rank-poor); }
+.rank-none .stat-value { color: var(--text-secondary); }
+
+/* Stat name */
+.stat-name {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    line-height: 1.2;
+}
+
+/* ============================================
+   Rank Bar Visualization
+   ============================================ */
+
+.rank-bar-container {
+    position: relative;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    margin-top: 6px;
+    overflow: visible;
+}
+
+.rank-bar {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.6s ease-out;
+}
+
+.rank-excellent .rank-bar { background: linear-gradient(90deg, var(--rank-excellent) 0%, #34D399 100%); }
+.rank-good .rank-bar { background: linear-gradient(90deg, var(--rank-good) 0%, #60A5FA 100%); }
+.rank-average .rank-bar { background: linear-gradient(90deg, var(--rank-average) 0%, #FBBF24 100%); }
+.rank-poor .rank-bar { background: linear-gradient(90deg, var(--rank-poor) 0%, #F87171 100%); }
+
+.rank-positions {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.pos-marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.pos-dot {
+    display: block;
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px var(--bg-card), 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Rank label */
+.rank-label {
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 4px;
+}
+
+.rank-excellent .rank-label { color: var(--rank-excellent); }
+.rank-good .rank-label { color: var(--rank-good); }
+.rank-average .rank-label { color: var(--rank-average); }
+.rank-poor .rank-label { color: var(--rank-poor); }
+.rank-label.no-rank { color: var(--text-muted); }
+
+/* ============================================
+   Card Border Accents
+   ============================================ */
+
+.stat-card.rank-excellent {
+    border-left: 3px solid var(--rank-excellent);
+}
+
+.stat-card.rank-good {
+    border-left: 3px solid var(--rank-good);
+}
+
+.stat-card.rank-average {
+    border-left: 3px solid var(--rank-average);
+}
+
+.stat-card.rank-poor {
+    border-left: 3px solid var(--rank-poor);
+}
+
+.stat-card.rank-none {
+    border-left: 3px solid var(--text-muted);
+}
+
+/* ============================================
+   Error State
+   ============================================ */
+
+.error-state {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 40px;
+    color: var(--text-muted);
+}
+
+.error-state svg {
+    width: 40px;
+    height: 40px;
+    opacity: 0.5;
+}
+
+/* ============================================
+   Footer
+   ============================================ */
+
+.footer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    height: var(--footer-height);
+    flex-shrink: 0;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-color);
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+.footer .divider {
+    opacity: 0.5;
+}
+
+/* ============================================
+   Responsive Adjustments
+   ============================================ */
+
+@media (min-width: 1400px) {
+    .stats-grid {
+        grid-template-columns: repeat(7, 1fr);
+    }
+}
+
+@media (min-width: 1200px) and (max-width: 1399px) {
+    .stats-grid {
+        grid-template-columns: repeat(6, 1fr);
+    }
+}
+
+@media (min-width: 1000px) and (max-width: 1199px) {
+    .stats-grid {
+        grid-template-columns: repeat(5, 1fr);
+    }
+}
+
+@media (max-width: 999px) {
+    .stats-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard {
+        padding: 12px 16px;
+    }
+
+    .tabs {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 8px 0;
+    }
+
+    .tab-btn {
+        padding: 6px 12px;
+        font-size: 0.75rem;
+    }
+
+    .tab-btn svg {
+        display: none;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+
+    .stat-card {
+        padding: 10px;
+    }
+
+    .stat-value {
+        font-size: 1.3rem;
+    }
+}
+
+/* ============================================
+   Animation Keyframes
+   ============================================ */
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}

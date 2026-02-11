@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premier League Stats 2025-26</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Header -->
+        <header class="header">
+            <div class="club-info">
+                <div class="custom-dropdown" id="team-dropdown">
+                    <button class="dropdown-trigger" id="dropdown-trigger">
+                        <span class="selected-team" id="selected-team-name">West Ham United</span>
+                        <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                    </button>
+                    <div class="dropdown-menu" id="dropdown-menu">
+                        <div class="dropdown-search">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <path d="M21 21l-4.35-4.35"/>
+                            </svg>
+                            <input type="text" id="team-search" placeholder="Search teams..." autocomplete="off">
+                        </div>
+                        <div class="dropdown-list" id="dropdown-list">
+                            {% for key, team in teams.items() %}
+                            <div class="dropdown-item {% if key == 'west-ham' %}active{% endif %}" data-value="{{ key }}">
+                                {{ team.name }}
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <span class="season-badge">2025-26 Premier League</span>
+            </div>
+            <div class="header-actions">
+                <div class="last-updated">
+                    <span class="update-label">Last updated</span>
+                    <span class="update-time" id="last-updated">--:--</span>
+                </div>
+                <button id="refresh-btn" class="refresh-btn">
+                    <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                    </svg>
+                    <span>Refresh</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="tabs">
+            <button class="tab-btn active" data-category="attacking">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 6v6l4 2"/>
+                </svg>
+                Attacking
+            </button>
+            <button class="tab-btn" data-category="passing">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                </svg>
+                Passing
+            </button>
+            <button class="tab-btn" data-category="defending">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                Defending
+            </button>
+            <button class="tab-btn" data-category="goalkeeping">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>
+                </svg>
+                Goalkeeping
+            </button>
+            <button class="tab-btn" data-category="miscellaneous">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+                Miscellaneous
+            </button>
+        </nav>
+
+        <!-- Loading State -->
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <p>Fetching latest stats...</p>
+        </div>
+
+        <!-- Stats Grid -->
+        <main class="stats-grid" id="stats-container">
+            <!-- Stats will be loaded here -->
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <span>Data from StatMuse</span>
+            <span class="divider">•</span>
+            <span>Premier League 2025-26</span>
+        </footer>
+    </div>
+
+    <script>
+        const statsContainer = document.getElementById('stats-container');
+        const loading = document.getElementById('loading');
+        const refreshBtn = document.getElementById('refresh-btn');
+        const lastUpdated = document.getElementById('last-updated');
+        const tabBtns = document.querySelectorAll('.tab-btn');
+
+        // Custom dropdown elements
+        const dropdown = document.getElementById('team-dropdown');
+        const dropdownTrigger = document.getElementById('dropdown-trigger');
+        const dropdownMenu = document.getElementById('dropdown-menu');
+        const dropdownList = document.getElementById('dropdown-list');
+        const selectedTeamName = document.getElementById('selected-team-name');
+        const teamSearch = document.getElementById('team-search');
+        const dropdownItems = document.querySelectorAll('.dropdown-item');
+
+        let allStats = {};
+        let currentCategory = 'attacking';
+        let currentTeam = 'west-ham';
+
+        // Stats where a HIGH rank (1st, 2nd) is BAD (inverted logic)
+        // These are stats where ranking 1st means you have the MOST of something bad
+        // Note: GC, GC/M, YC, RC rankings are already formatted as 1st = fewest (best)
+        const INVERTED_STATS = ['xGA', 'ERR-SH', 'ERR-G', 'PKC', 'OG', 'AER-L', 'DUEL-L', 'POSS-L'];
+
+        // Custom dropdown functionality
+        dropdownTrigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.classList.toggle('open');
+            if (dropdown.classList.contains('open')) {
+                teamSearch.focus();
+                teamSearch.value = '';
+                filterTeams('');
+            }
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!dropdown.contains(e.target)) {
+                dropdown.classList.remove('open');
+            }
+        });
+
+        // Search functionality
+        teamSearch.addEventListener('input', (e) => {
+            filterTeams(e.target.value.toLowerCase());
+        });
+
+        function filterTeams(query) {
+            dropdownItems.forEach(item => {
+                const teamName = item.textContent.toLowerCase();
+                if (teamName.includes(query)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        // Team selection
+        dropdownItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const teamKey = item.dataset.value;
+                const teamName = item.textContent.trim();
+
+                // Update selected state
+                dropdownItems.forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+
+                // Update display
+                selectedTeamName.textContent = teamName;
+                currentTeam = teamKey;
+
+                // Close dropdown and fetch stats
+                dropdown.classList.remove('open');
+                fetchAllStats();
+            });
+        });
+
+        // Keyboard navigation
+        teamSearch.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                dropdown.classList.remove('open');
+            }
+        });
+
+        // Tab switching
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentCategory = btn.dataset.category;
+                displayStats(currentCategory);
+            });
+        });
+
+        // Refresh button
+        refreshBtn.addEventListener('click', fetchAllStats);
+
+        function showLoading() {
+            loading.style.display = 'flex';
+            statsContainer.style.opacity = '0';
+        }
+
+        function hideLoading() {
+            loading.style.display = 'none';
+            statsContainer.style.opacity = '1';
+        }
+
+        function isInvertedStat(abbrev) {
+            return INVERTED_STATS.includes(abbrev);
+        }
+
+        function getRankNumber(rank) {
+            if (!rank || rank === '-') return null;
+            return parseInt(rank.replace(/\D/g, ''));
+        }
+
+        function getRankClass(rank, inverted = false) {
+            const num = getRankNumber(rank);
+            if (num === null) return 'rank-none';
+
+            if (inverted) {
+                // For inverted stats: high rank = bad, low rank = good
+                if (num <= 5) return 'rank-poor';
+                if (num <= 10) return 'rank-average';
+                if (num <= 15) return 'rank-good';
+                return 'rank-excellent';
+            } else {
+                // Normal: high rank = good
+                if (num <= 5) return 'rank-excellent';
+                if (num <= 10) return 'rank-good';
+                if (num <= 15) return 'rank-average';
+                return 'rank-poor';
+            }
+        }
+
+        function getRankLabel(rank, inverted = false) {
+            const num = getRankNumber(rank);
+            if (num === null) return '';
+
+            if (inverted) {
+                // For inverted stats: high rank = bad
+                if (num <= 5) return 'Poor';
+                if (num <= 10) return 'Below Avg';
+                if (num <= 15) return 'Good';
+                return 'Excellent';
+            } else {
+                if (num <= 5) return 'Excellent';
+                if (num <= 10) return 'Good';
+                if (num <= 15) return 'Average';
+                return 'Below Avg';
+            }
+        }
+
+        function getRankPercentage(rank, inverted = false) {
+            const num = getRankNumber(rank);
+            if (num === null) return 0;
+
+            if (inverted) {
+                // For inverted stats: rank 20 = 100% (good), rank 1 = 5% (bad)
+                return Math.max(5, (num - 1) * 5 + 5);
+            } else {
+                // Normal: rank 1 = 100%, rank 20 = 5%
+                return Math.max(5, 100 - ((num - 1) * 5));
+            }
+        }
+
+        function displayStats(category) {
+            const data = allStats[category];
+
+            if (!data || !data.success || data.stats.length === 0) {
+                statsContainer.innerHTML = `
+                    <div class="error-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 8v4M12 16h.01"/>
+                        </svg>
+                        <p>Unable to load ${category} stats</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Filter out M (Matches) as it doesn't have a rank and we'll show it separately
+            const matchesStat = data.stats.find(s => s.abbrev === 'M');
+            const statsToShow = data.stats.filter(s => s.abbrev !== 'M');
+
+            let html = '';
+
+            // Create stat cards
+            statsToShow.forEach((stat, index) => {
+                const inverted = isInvertedStat(stat.abbrev);
+                const rankClass = getRankClass(stat.rank, inverted);
+                const rankPct = getRankPercentage(stat.rank, inverted);
+                const rankNum = getRankNumber(stat.rank);
+                const rankLabel = getRankLabel(stat.rank, inverted);
+
+                html += `
+                    <div class="stat-card ${rankClass}" style="animation-delay: ${index * 0.03}s">
+                        <div class="stat-header">
+                            <span class="stat-abbrev">${stat.abbrev}</span>
+                            ${stat.rank !== '-' ? `<span class="rank-badge">${stat.rank}</span>` : ''}
+                        </div>
+                        <div class="stat-value">${stat.club}</div>
+                        <div class="stat-name">${stat.name}</div>
+                        ${stat.rank !== '-' ? `
+                            <div class="rank-bar-container">
+                                <div class="rank-bar" style="width: ${rankPct}%"></div>
+                                <div class="rank-positions">
+                                    <span class="pos-marker" style="left: ${rankPct}%">
+                                        <span class="pos-dot"></span>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="rank-label">${rankLabel}</div>
+                        ` : '<div class="rank-label no-rank">No ranking</div>'}
+                    </div>
+                `;
+            });
+
+            statsContainer.innerHTML = html;
+
+            // Add animation class after a brief delay
+            requestAnimationFrame(() => {
+                statsContainer.querySelectorAll('.stat-card').forEach(card => {
+                    card.classList.add('animate-in');
+                });
+            });
+        }
+
+        async function fetchAllStats() {
+            showLoading();
+            refreshBtn.disabled = true;
+            refreshBtn.classList.add('loading');
+
+            try {
+                const response = await fetch(`/api/stats?team=${currentTeam}`);
+                const data = await response.json();
+
+                // Store stats by category
+                allStats = {
+                    attacking: data.attacking,
+                    passing: data.passing,
+                    defending: data.defending,
+                    goalkeeping: data.goalkeeping,
+                    miscellaneous: data.miscellaneous
+                };
+
+                displayStats(currentCategory);
+
+                const now = new Date();
+                lastUpdated.textContent = now.toLocaleTimeString('en-GB', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (error) {
+                statsContainer.innerHTML = `
+                    <div class="error-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 8v4M12 16h.01"/>
+                        </svg>
+                        <p>Connection error. Please try again.</p>
+                    </div>
+                `;
+            } finally {
+                hideLoading();
+                refreshBtn.disabled = false;
+                refreshBtn.classList.remove('loading');
+            }
+        }
+
+        // Initial load
+        fetchAllStats();
+    </script>
+</body>
+</html>
