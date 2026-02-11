@@ -743,3 +743,812 @@ body {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
 }
+
+/* ============================================
+   Compare View - Broadcast Quality Design
+   ============================================ */
+
+.hidden {
+    display: none !important;
+}
+
+/* Tab divider before Compare tab */
+.tab-divider {
+    width: 1px;
+    height: 24px;
+    background: var(--border-color);
+    margin: 0 8px;
+    align-self: center;
+}
+
+.tab-compare {
+    background: linear-gradient(135deg, var(--sky-blue-dark) 0%, #0a6f94 100%) !important;
+    border-color: var(--sky-blue-dark) !important;
+}
+
+.tab-compare:hover {
+    background: linear-gradient(135deg, var(--sky-blue) 0%, var(--sky-blue-dark) 100%) !important;
+}
+
+.tab-compare.active {
+    background: linear-gradient(135deg, var(--sky-blue) 0%, var(--sky-blue-dark) 100%) !important;
+    border-color: var(--sky-blue) !important;
+}
+
+/* Compare View Container */
+.compare-view {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 8px 0;
+    gap: 12px;
+    min-height: 0;
+    position: relative;
+}
+
+/* Scrollable content area (tabs + stats) */
+.compare-content-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* ============================================
+   Matchup Header - The Hero Section
+   ============================================ */
+
+.matchup-header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 20px;
+    align-items: center;
+    padding: 20px 30px;
+    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    flex-shrink: 0;
+    position: relative;
+    overflow: visible;
+}
+
+.matchup-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--claret) 0%, var(--sky-blue) 50%, var(--claret) 100%);
+    border-radius: 16px 16px 0 0;
+}
+
+.matchup-team {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: all 0.3s ease;
+    overflow: visible;
+    position: relative;
+    z-index: 10;
+}
+
+.matchup-team.dropdown-active,
+.matchup-team:has(.compare-dropdown.open) {
+    z-index: 400;
+}
+
+.matchup-team.team-left {
+    align-items: flex-start;
+}
+
+.matchup-team.team-right {
+    align-items: flex-end;
+}
+
+.matchup-team.leading {
+    transform: scale(1.02);
+}
+
+.matchup-team.leading .team-score {
+    color: var(--rank-excellent);
+    text-shadow: 0 0 30px rgba(16, 185, 129, 0.5);
+}
+
+
+/* Team Score Display */
+.team-score {
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    transition: all 0.3s ease;
+}
+
+.team-score-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+}
+
+/* VS Badge - Center */
+.matchup-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    z-index: 1;
+}
+
+.vs-badge {
+    width: 70px;
+    height: 70px;
+    background: linear-gradient(135deg, var(--claret) 0%, var(--claret-dark) 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow:
+        0 4px 20px rgba(122, 38, 58, 0.4),
+        inset 0 2px 4px rgba(255, 255, 255, 0.1);
+    position: relative;
+}
+
+.vs-badge::before {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--claret-light) 0%, transparent 50%, var(--claret-dark) 100%);
+    z-index: -1;
+    opacity: 0.5;
+}
+
+.vs-text {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.matchup-category {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--sky-blue);
+    padding: 4px 12px;
+    background: rgba(27, 177, 231, 0.1);
+    border-radius: 20px;
+}
+
+/* ============================================
+   Compare Custom Dropdowns
+   ============================================ */
+
+.compare-dropdown {
+    position: relative;
+    z-index: 200;
+}
+
+.compare-dropdown.open {
+    z-index: 300;
+}
+
+.compare-dropdown-trigger {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-card) 100%);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 220px;
+    max-width: 280px;
+}
+
+.compare-dropdown-trigger:hover {
+    border-color: var(--claret);
+    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-hover) 100%);
+}
+
+.compare-dropdown.open .compare-dropdown-trigger {
+    border-color: var(--claret);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    box-shadow: 0 0 0 4px rgba(122, 38, 58, 0.15);
+}
+
+.compare-selected-team {
+    flex: 1;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.team-right .compare-selected-team {
+    text-align: right;
+}
+
+.team-right .compare-dropdown-trigger {
+    flex-direction: row-reverse;
+}
+
+.compare-dropdown-arrow {
+    width: 18px;
+    height: 18px;
+    color: var(--text-secondary);
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+}
+
+.compare-dropdown.open .compare-dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.compare-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 100%;
+    background: var(--bg-card);
+    border: 2px solid var(--claret);
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s ease;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+}
+
+.compare-dropdown.open .compare-dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.compare-dropdown-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+}
+
+.compare-dropdown-search svg {
+    width: 16px;
+    height: 16px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.compare-dropdown-search input {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.9rem;
+    outline: none;
+}
+
+.compare-dropdown-search input::placeholder {
+    color: var(--text-muted);
+}
+
+.compare-dropdown-list {
+    max-height: 300px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.compare-dropdown-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.compare-dropdown-list::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+
+.compare-dropdown-list::-webkit-scrollbar-thumb {
+    background: var(--claret);
+    border-radius: 3px;
+}
+
+.compare-dropdown-item {
+    padding: 11px 14px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.compare-dropdown-item:hover {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+}
+
+.compare-dropdown-item.active {
+    background: linear-gradient(135deg, var(--claret) 0%, var(--claret-dark) 100%);
+    color: white;
+    font-weight: 600;
+}
+
+/* ============================================
+   Compare Category Tabs
+   ============================================ */
+
+.compare-tabs {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    overflow-x: auto;
+    padding: 4px;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    z-index: 1;
+}
+
+.compare-tabs::-webkit-scrollbar {
+    height: 0;
+}
+
+.compare-tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.compare-tab-btn svg {
+    width: 16px;
+    height: 16px;
+    opacity: 0.6;
+}
+
+.compare-tab-btn:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.compare-tab-btn:hover svg {
+    opacity: 0.8;
+}
+
+.compare-tab-btn.active {
+    background: linear-gradient(135deg, var(--claret) 0%, var(--claret-dark) 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(122, 38, 58, 0.3);
+}
+
+.compare-tab-btn.active svg {
+    opacity: 1;
+}
+
+/* ============================================
+   Compare Stats Container
+   ============================================ */
+
+.compare-stats {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 8px;
+    min-height: 0;
+}
+
+.compare-stats::-webkit-scrollbar {
+    width: 6px;
+}
+
+.compare-stats::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.compare-stats::-webkit-scrollbar-thumb {
+    background: var(--claret);
+    border-radius: 3px;
+}
+
+/* ============================================
+   Compare Row - The Star of the Show
+   ============================================ */
+
+.compare-row {
+    display: grid;
+    grid-template-columns: 1fr 180px 1fr;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    opacity: 0;
+    transform: translateY(15px);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.compare-row.animate-in {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.compare-row:hover {
+    background: var(--bg-card-hover);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: scale(1.01);
+}
+
+.compare-row.has-winner {
+    border-left: 3px solid transparent;
+    border-right: 3px solid transparent;
+}
+
+/* ============================================
+   Stat Cell - Team Values
+   ============================================ */
+
+.stat-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-cell.team1 {
+    align-items: flex-end;
+    text-align: right;
+}
+
+.stat-cell.team2 {
+    align-items: flex-start;
+    text-align: left;
+}
+
+.stat-value-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.stat-cell.team1 .stat-value-wrap {
+    flex-direction: row;
+}
+
+.stat-cell.team2 .stat-value-wrap {
+    flex-direction: row-reverse;
+}
+
+.stat-main-value {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    transition: all 0.3s ease;
+}
+
+.stat-rank {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    padding: 2px 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+}
+
+/* Winner Icon */
+.winner-icon {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    animation: trophyPop 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+@keyframes trophyPop {
+    0% { transform: scale(0) rotate(-20deg); opacity: 0; }
+    60% { transform: scale(1.2) rotate(5deg); }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* Winner Styling */
+.stat-cell.winner {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.stat-cell.winner .stat-main-value {
+    color: var(--rank-excellent);
+}
+
+.stat-cell.winner .stat-rank {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--rank-excellent);
+}
+
+.stat-cell.winner .winner-icon {
+    color: #FFD700;
+}
+
+/* Loser Styling */
+.stat-cell.loser {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.02) 100%);
+    border: 1px solid rgba(239, 68, 68, 0.15);
+}
+
+.stat-cell.loser .stat-main-value {
+    color: var(--rank-poor);
+    opacity: 0.8;
+}
+
+.stat-cell.loser .stat-rank {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--rank-poor);
+    opacity: 0.7;
+}
+
+/* Draw Styling */
+.stat-cell.draw {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.stat-cell.draw .stat-main-value {
+    color: var(--text-secondary);
+}
+
+/* ============================================
+   Center Column - Stat Info + Bar
+   ============================================ */
+
+.stat-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.stat-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.stat-abbrev {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.stat-name {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    line-height: 1.3;
+    max-width: 140px;
+}
+
+/* Comparison Bar - Visual Indicator */
+.comparison-bar {
+    display: flex;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.bar-left,
+.bar-right {
+    height: 100%;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bar-left {
+    width: var(--width);
+    border-radius: 3px 0 0 3px;
+    background: linear-gradient(90deg, var(--text-muted) 0%, var(--text-secondary) 100%);
+}
+
+.bar-right {
+    width: var(--width);
+    border-radius: 0 3px 3px 0;
+    background: linear-gradient(90deg, var(--text-secondary) 0%, var(--text-muted) 100%);
+}
+
+.bar-left.winner {
+    background: linear-gradient(90deg, var(--rank-excellent) 0%, #34D399 100%);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+.bar-right.winner {
+    background: linear-gradient(90deg, #34D399 0%, var(--rank-excellent) 100%);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+}
+
+.bar-left.loser {
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.4) 0%, rgba(239, 68, 68, 0.6) 100%);
+}
+
+.bar-right.loser {
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.6) 0%, rgba(239, 68, 68, 0.4) 100%);
+}
+
+/* ============================================
+   Error State
+   ============================================ */
+
+.compare-stats .error-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    color: var(--text-muted);
+}
+
+.compare-stats .error-state svg {
+    width: 48px;
+    height: 48px;
+    opacity: 0.4;
+}
+
+/* ============================================
+   Responsive Design for Compare
+   ============================================ */
+
+@media (max-width: 900px) {
+    .matchup-header {
+        padding: 16px 20px;
+        gap: 15px;
+    }
+
+    .compare-dropdown-trigger {
+        font-size: 0.95rem;
+        min-width: 170px;
+        padding: 10px 14px;
+    }
+
+    .team-score {
+        font-size: 2.5rem;
+    }
+
+    .vs-badge {
+        width: 55px;
+        height: 55px;
+    }
+
+    .vs-text {
+        font-size: 1.1rem;
+    }
+
+    .compare-row {
+        grid-template-columns: 1fr 140px 1fr;
+        gap: 8px;
+        padding: 10px 12px;
+    }
+
+    .stat-main-value {
+        font-size: 1.3rem;
+    }
+
+    .stat-abbrev {
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 650px) {
+    .matchup-header {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto;
+        gap: 12px;
+    }
+
+    .matchup-center {
+        grid-column: 1 / -1;
+        grid-row: 1;
+        flex-direction: row;
+        justify-content: center;
+        gap: 16px;
+    }
+
+    .vs-badge {
+        width: 45px;
+        height: 45px;
+    }
+
+    .vs-text {
+        font-size: 0.9rem;
+    }
+
+    .matchup-team.team-left,
+    .matchup-team.team-right {
+        align-items: center;
+    }
+
+    .compare-dropdown-trigger {
+        font-size: 0.85rem;
+        min-width: 140px;
+        max-width: 160px;
+        padding: 8px 12px;
+    }
+
+    .compare-dropdown-arrow {
+        width: 14px;
+        height: 14px;
+    }
+
+    .team-right .compare-dropdown-trigger {
+        flex-direction: row;
+    }
+
+    .team-right .compare-selected-team {
+        text-align: left;
+    }
+
+    .team-score {
+        font-size: 2rem;
+    }
+
+    .compare-row {
+        grid-template-columns: 1fr 100px 1fr;
+    }
+
+    .stat-main-value {
+        font-size: 1.1rem;
+    }
+
+    .stat-name {
+        display: none;
+    }
+
+    .winner-icon {
+        width: 18px;
+        height: 18px;
+    }
+
+    .compare-tab-btn svg {
+        display: none;
+    }
+
+    .compare-tab-btn {
+        padding: 8px 14px;
+        font-size: 0.75rem;
+    }
+}
