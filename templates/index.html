@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
     <div class="dashboard">
@@ -52,6 +53,12 @@
                     </svg>
                     <span>Refresh</span>
                 </button>
+                <button id="screenshot-btn" class="screenshot-btn" title="Save screenshot">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                        <circle cx="12" cy="13" r="4"/>
+                    </svg>
+                </button>
             </div>
         </header>
 
@@ -91,9 +98,6 @@
             </button>
             <div class="tab-divider"></div>
             <button class="tab-btn tab-compare" data-category="compare">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M16 3h5v5M8 3H3v5M3 16v5h5M21 16v5h-5M12 8v8M8 12h8"/>
-                </svg>
                 Compare
             </button>
         </nav>
@@ -139,14 +143,14 @@
                         </div>
                     </div>
                     <div class="team-score" id="team1-score">0</div>
-                    <div class="team-score-label">Stats Won</div>
+                    <div class="team-score-label">Overall Stats Won</div>
                 </div>
 
                 <div class="matchup-center">
                     <div class="vs-badge">
                         <span class="vs-text">VS</span>
                     </div>
-                    <div class="matchup-category" id="current-category-label">ATTACKING</div>
+                    <div class="matchup-category" id="current-category-label"></div>
                 </div>
 
                 <div class="matchup-team team-right">
@@ -175,15 +179,15 @@
                         </div>
                     </div>
                     <div class="team-score" id="team2-score">0</div>
-                    <div class="team-score-label">Stats Won</div>
+                    <div class="team-score-label">Overall Stats Won</div>
                 </div>
             </div>
 
-            <!-- Scrollable Content Area -->
-            <div class="compare-content-area">
-                <!-- Compare Category Tabs -->
+            <!-- Category Picker -->
+            <div class="compare-picker">
+                <p class="compare-picker-label">Select a category to view comparison</p>
                 <div class="compare-tabs">
-                    <button class="compare-tab-btn active" data-compare-category="attacking">
+                    <button class="compare-tab-btn" data-compare-category="attacking">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"/>
                             <path d="M12 6v6l4 2"/>
@@ -213,15 +217,13 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                         </svg>
-                        Misc
+                        Miscellaneous
                     </button>
                 </div>
-
-                <!-- Compare Stats -->
-                <div class="compare-stats" id="compare-stats">
-                    <!-- Comparison rows will be loaded here -->
-                </div>
             </div>
+
+            <!-- Hidden — kept for JS compatibility -->
+            <div class="compare-stats" id="compare-stats" style="display:none"></div>
         </main>
 
         <!-- Footer -->
@@ -230,6 +232,50 @@
             <span class="divider">•</span>
             <span>Premier League 2025-26</span>
         </footer>
+    </div>
+
+    <!-- Category Stats Modal -->
+    <div class="stat-modal-overlay" id="stat-modal-overlay">
+        <div class="stat-modal" id="stat-modal">
+            <button class="modal-close-btn" id="modal-close-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+            </button>
+
+            <div class="modal-matchup-header">
+                <div class="modal-team-block modal-left">
+                    <div class="modal-team-name" id="modal-team1-name"></div>
+                    <div class="modal-wins-display leading" id="modal-team1-wins">
+                        <span class="modal-wins-num" id="modal-wins-num1">0</span>
+                        <span class="modal-wins-label">stats won</span>
+                    </div>
+                </div>
+                <div class="modal-center-block">
+                    <div class="modal-vs-badge">VS</div>
+                    <div class="modal-category-pill" id="modal-category-pill">ATTACKING</div>
+                </div>
+                <div class="modal-team-block modal-right">
+                    <div class="modal-team-name" id="modal-team2-name"></div>
+                    <div class="modal-wins-display" id="modal-team2-wins">
+                        <span class="modal-wins-num" id="modal-wins-num2">0</span>
+                        <span class="modal-wins-label">stats won</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-stats-grid" id="modal-stats-grid">
+                <!-- Stats populated by JS -->
+            </div>
+        </div>
+        <!-- Screenshot button sits outside the modal, in the gap below -->
+        <button class="modal-screenshot-btn" id="modal-screenshot-btn" title="Save screenshot">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+            </svg>
+            <span>Save Screenshot</span>
+        </button>
     </div>
 
     <script>
@@ -263,11 +309,13 @@
         let currentTeam = 'west-ham';
         let isCompareMode = false;
 
-        // Stats where a HIGH rank (1st, 2nd) is BAD (inverted logic)
+        // Stats where StatMuse ranks by highest raw value first (rank 1 = most = worst for these stats)
+        // Only these need the colour mapping inverted. Other lower-is-better stats (GC, YC, etc.)
+        // are already ranked by StatMuse with rank 1 = best (fewest), so no inversion needed.
         const INVERTED_STATS = ['xGA', 'ERR-SH', 'ERR-G', 'PKC', 'OG', 'AER-L', 'DUEL-L', 'POSS-L'];
 
-        // Stats where LOWER value is better (for comparison coloring)
-        const LOWER_IS_BETTER = ['xGA', 'ERR-SH', 'ERR-G', 'PKC', 'OG', 'GC', 'GC/M', 'YC', 'RC', 'FOUL', 'AER-L', 'DUEL-L', 'POSS-L'];
+        // Stats where LOWER raw value is better — used by compare mode to decide the winner
+        const LOWER_IS_BETTER = ['OFF', 'xGA', 'TKL-LM', 'ERR-SH', 'ERR-G', 'PKC', 'OG', 'GC', 'GC/M', 'YC', 'RC', 'FOUL', 'AER-L', 'DUEL-L', 'POSS-L'];
 
         // Custom dropdown functionality
         dropdownTrigger.addEventListener('click', (e) => {
@@ -339,13 +387,13 @@
             });
         });
 
-        // Compare category tabs
+        // Compare category tabs — open modal only
         compareTabBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 compareTabBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 currentCompareCategory = btn.dataset.compareCategory;
-                displayComparison();
+                openCategoryModal(currentCompareCategory);
             });
         });
 
@@ -428,12 +476,14 @@
             loading.style.display = 'flex';
             statsContainer.style.opacity = '0';
             compareContainer.style.opacity = '0';
+            refreshBtn.style.display = 'none';
         }
 
         function hideLoading() {
             loading.style.display = 'none';
             statsContainer.style.opacity = '1';
             compareContainer.style.opacity = '1';
+            refreshBtn.style.display = '';
         }
 
         function isInvertedStat(abbrev) {
@@ -721,6 +771,48 @@
             }
         }
 
+        function calculateTotalWins() {
+            const categories = ['attacking', 'passing', 'defending', 'goalkeeping', 'miscellaneous'];
+            let team1Total = 0;
+            let team2Total = 0;
+
+            categories.forEach(category => {
+                const data1 = compareStats1[category];
+                const data2 = compareStats2[category];
+                if (!data1?.success || !data2?.success) return;
+
+                const stats1 = data1.stats.filter(s => s.abbrev !== 'M');
+                const stats2 = data2.stats.filter(s => s.abbrev !== 'M');
+
+                stats1.forEach(stat1 => {
+                    const stat2 = stats2.find(s => s.abbrev === stat1.abbrev) || { club: '-' };
+                    const val1 = parseStatValue(stat1.club);
+                    const val2 = parseStatValue(stat2.club);
+                    const lowerBetter = isLowerBetter(stat1.abbrev);
+
+                    if (val1 !== null && val2 !== null && val1 !== val2) {
+                        if (lowerBetter ? val1 < val2 : val1 > val2) {
+                            team1Total++;
+                        } else {
+                            team2Total++;
+                        }
+                    }
+                });
+            });
+
+            return { team1Total, team2Total };
+        }
+
+        function updateHeaderScores() {
+            const { team1Total, team2Total } = calculateTotalWins();
+            const team1ScoreEl = document.getElementById('team1-score');
+            const team2ScoreEl = document.getElementById('team2-score');
+            animateScore(team1ScoreEl, team1Total);
+            animateScore(team2ScoreEl, team2Total);
+            team1ScoreEl.parentElement.classList.toggle('leading', team1Total > team2Total);
+            team2ScoreEl.parentElement.classList.toggle('leading', team2Total > team1Total);
+        }
+
         async function fetchCompareStats() {
             showLoading();
             refreshBtn.disabled = true;
@@ -754,7 +846,7 @@
                     miscellaneous: data2.miscellaneous
                 };
 
-                displayComparison();
+                updateHeaderScores();
                 updateLastUpdated();
             } catch (error) {
                 compareStats.innerHTML = `
@@ -780,6 +872,194 @@
                 minute: '2-digit'
             });
         }
+
+        // ============================================
+        //  Category Stats Modal
+        // ============================================
+
+        const statModalOverlay = document.getElementById('stat-modal-overlay');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+        const modalTeam1Name = document.getElementById('modal-team1-name');
+        const modalTeam2Name = document.getElementById('modal-team2-name');
+        const modalWinsNum1 = document.getElementById('modal-wins-num1');
+        const modalWinsNum2 = document.getElementById('modal-wins-num2');
+        const modalTeam1Wins = document.getElementById('modal-team1-wins');
+        const modalTeam2Wins = document.getElementById('modal-team2-wins');
+        const modalCategoryPill = document.getElementById('modal-category-pill');
+        const modalStatsGrid = document.getElementById('modal-stats-grid');
+
+        function openCategoryModal(category) {
+            const data1 = compareStats1[category];
+            const data2 = compareStats2[category];
+            if (!data1?.success || !data2?.success) return;
+
+            // Team names
+            const t1Name = compareDropdown1.querySelector('.compare-selected-team').textContent.trim();
+            const t2Name = compareDropdown2.querySelector('.compare-selected-team').textContent.trim();
+            modalTeam1Name.textContent = t1Name;
+            modalTeam2Name.textContent = t2Name;
+            modalCategoryPill.textContent = category.toUpperCase();
+
+            // Update the VS header label now that a category is chosen
+            document.getElementById('current-category-label').textContent = category.toUpperCase();
+
+            // Build content
+            const { html, team1Wins, team2Wins } = buildModalContent(category, data1, data2);
+            modalStatsGrid.innerHTML = html;
+
+            // Update modal win counts
+            modalWinsNum1.textContent = team1Wins;
+            modalWinsNum2.textContent = team2Wins;
+            modalTeam1Wins.classList.toggle('leading', team1Wins > team2Wins);
+            modalTeam2Wins.classList.toggle('leading', team2Wins > team1Wins);
+            modalTeam1Wins.classList.toggle('trailing', team1Wins < team2Wins);
+            modalTeam2Wins.classList.toggle('trailing', team2Wins < team1Wins);
+
+
+            // Open modal
+            statModalOverlay.classList.add('open');
+            document.body.style.overflow = 'hidden';
+
+            // Stagger animate cards
+            requestAnimationFrame(() => {
+                modalStatsGrid.querySelectorAll('.modal-stat-item').forEach((el, i) => {
+                    setTimeout(() => el.classList.add('animate-in'), i * 30);
+                });
+            });
+        }
+
+        function buildModalContent(category, data1, data2) {
+            const stats1 = data1.stats.filter(s => s.abbrev !== 'M');
+            const stats2 = data2.stats.filter(s => s.abbrev !== 'M');
+            let html = '';
+            let team1Wins = 0;
+            let team2Wins = 0;
+
+            stats1.forEach((stat1) => {
+                const stat2 = stats2.find(s => s.abbrev === stat1.abbrev) || { club: '-', rank: '-' };
+                const val1 = parseStatValue(stat1.club);
+                const val2 = parseStatValue(stat2.club);
+                const lowerBetter = isLowerBetter(stat1.abbrev);
+
+                let winner = 'draw';
+                if (val1 !== null && val2 !== null && val1 !== val2) {
+                    winner = lowerBetter ? (val1 < val2 ? 'team1' : 'team2') : (val1 > val2 ? 'team1' : 'team2');
+                }
+
+                if (winner === 'team1') team1Wins++;
+                if (winner === 'team2') team2Wins++;
+
+                let bar1Pct = 50, bar2Pct = 50;
+                if (val1 !== null && val2 !== null && (Math.abs(val1) + Math.abs(val2)) > 0) {
+                    const total = Math.abs(val1) + Math.abs(val2);
+                    bar1Pct = (Math.abs(val1) / total) * 100;
+                    bar2Pct = (Math.abs(val2) / total) * 100;
+                }
+
+                const c1 = winner === 'team1' ? 'winner' : (winner === 'team2' ? 'loser' : 'draw');
+                const c2 = winner === 'team2' ? 'winner' : (winner === 'team1' ? 'loser' : 'draw');
+
+                html += `
+                    <div class="modal-stat-item">
+                        <div class="modal-val-cell left ${c1}">
+                            <div class="modal-val-inner">
+                                <span class="modal-main-val">${stat1.club}</span>
+                                ${stat1.rank !== '-' ? `<span class="modal-rank-pill">${stat1.rank}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="modal-stat-info">
+                            <span class="modal-abbrev">${stat1.abbrev}</span>
+                            <span class="modal-stat-name-text">${stat1.name}</span>
+                            <div class="modal-bar">
+                                <div class="modal-bar-left ${c1}" style="width: ${bar1Pct}%"></div>
+                                <div class="modal-bar-right ${c2}" style="width: ${bar2Pct}%"></div>
+                            </div>
+                        </div>
+                        <div class="modal-val-cell right ${c2}">
+                            <div class="modal-val-inner">
+                                <span class="modal-main-val">${stat2.club}</span>
+                                ${stat2.rank !== '-' ? `<span class="modal-rank-pill">${stat2.rank}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            return { html, team1Wins, team2Wins };
+        }
+
+        function closeModal() {
+            statModalOverlay.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        modalCloseBtn.addEventListener('click', closeModal);
+        statModalOverlay.addEventListener('click', (e) => {
+            if (e.target === statModalOverlay) closeModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && statModalOverlay.classList.contains('open')) closeModal();
+        });
+
+        // ============================================
+        // Screenshot — exports 1280×720 PNG
+        // ============================================
+        async function captureElement(element, filename) {
+            const allScreenshotBtns = document.querySelectorAll('.screenshot-btn, .modal-screenshot-btn');
+            allScreenshotBtns.forEach(b => b.style.visibility = 'hidden');
+
+            try {
+                const canvas = await html2canvas(element, {
+                    backgroundColor: '#0F0F13',
+                    useCORS: true,
+                    allowTaint: true,
+                    logging: false,
+                    scale: window.devicePixelRatio || 1
+                });
+
+                const link = document.createElement('a');
+                link.download = filename;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            } finally {
+                allScreenshotBtns.forEach(b => b.style.visibility = '');
+            }
+        }
+
+        // Single-team view: capture only the stats grid (all cards, no header/tabs)
+        document.getElementById('screenshot-btn').addEventListener('click', async () => {
+            const teamName = document.getElementById('selected-team-name').textContent.trim().replace(/\s+/g, '-');
+            const grid = document.querySelector('.stats-grid');
+            const dashboard = document.querySelector('.dashboard');
+
+            const prev = {
+                gridOverflow: grid.style.overflow,
+                gridHeight: grid.style.height,
+                gridMaxHeight: grid.style.maxHeight,
+                dashOverflow: dashboard.style.overflow
+            };
+            grid.style.overflow = 'visible';
+            grid.style.height = 'auto';
+            grid.style.maxHeight = 'none';
+            dashboard.style.overflow = 'visible';
+
+            try {
+                await captureElement(grid, `${teamName}-stats.png`);
+            } finally {
+                grid.style.overflow = prev.gridOverflow;
+                grid.style.height = prev.gridHeight;
+                grid.style.maxHeight = prev.gridMaxHeight;
+                dashboard.style.overflow = prev.dashOverflow;
+            }
+        });
+
+        // Compare modal: capture only the modal panel itself
+        document.getElementById('modal-screenshot-btn').addEventListener('click', () => {
+            const t1 = document.getElementById('modal-team1-name').textContent.trim().replace(/\s+/g, '-');
+            const t2 = document.getElementById('modal-team2-name').textContent.trim().replace(/\s+/g, '-');
+            const cat = document.getElementById('modal-category-pill').textContent.trim().toLowerCase();
+            captureElement(document.getElementById('stat-modal'), `${t1}-vs-${t2}-${cat}.png`);
+        });
 
         // Initial load
         fetchAllStats();

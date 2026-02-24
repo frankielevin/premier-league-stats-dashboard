@@ -14,12 +14,12 @@
     /* Rank Colors */
     --rank-excellent: #10B981;
     --rank-excellent-bg: rgba(16, 185, 129, 0.15);
-    --rank-good: #3B82F6;
-    --rank-good-bg: rgba(59, 130, 246, 0.15);
+    --rank-good: #60A5FA;
+    --rank-good-bg: rgba(96, 165, 250, 0.18);
     --rank-average: #F59E0B;
     --rank-average-bg: rgba(245, 158, 11, 0.15);
-    --rank-poor: #EF4444;
-    --rank-poor-bg: rgba(239, 68, 68, 0.15);
+    --rank-poor: #FF6060;
+    --rank-poor-bg: rgba(255, 96, 96, 0.18);
 
     /* Neutral Colors */
     --bg-primary: #0F0F13;
@@ -160,7 +160,7 @@ input, select, textarea, button {
 .dropdown-arrow {
     width: 20px;
     height: 20px;
-    color: var(--text-secondary);
+    color: var(--text-primary);
     transition: transform 0.2s ease;
     flex-shrink: 0;
 }
@@ -204,7 +204,7 @@ input, select, textarea, button {
 .dropdown-search svg {
     width: 18px;
     height: 18px;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     flex-shrink: 0;
 }
 
@@ -219,7 +219,7 @@ input, select, textarea, button {
 }
 
 .dropdown-search input::placeholder {
-    color: var(--text-muted);
+    color: var(--text-secondary);
 }
 
 .dropdown-list {
@@ -245,7 +245,7 @@ input, select, textarea, button {
     cursor: pointer;
     transition: all 0.15s ease;
     font-size: 0.95rem;
-    color: var(--text-secondary);
+    color: var(--text-primary);
 }
 
 .dropdown-item:hover {
@@ -277,10 +277,7 @@ input, select, textarea, button {
     font-size: 1.6rem;
     font-weight: 700;
     letter-spacing: -0.02em;
-    background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--text-primary);
 }
 
 .season-badge {
@@ -308,8 +305,8 @@ input, select, textarea, button {
 }
 
 .update-label {
-    font-size: 0.65rem;
-    color: var(--text-muted);
+    font-size: 0.72rem;
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
@@ -317,7 +314,7 @@ input, select, textarea, button {
 .update-time {
     font-size: 1rem;
     font-weight: 600;
-    color: var(--text-secondary);
+    color: var(--text-primary);
 }
 
 .refresh-btn {
@@ -362,6 +359,66 @@ input, select, textarea, button {
     to { transform: rotate(360deg); }
 }
 
+/* Screenshot button — header */
+.screenshot-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.screenshot-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+.screenshot-btn:hover {
+    background: rgba(27, 177, 231, 0.2);
+    border-color: var(--sky-blue);
+    color: var(--sky-blue);
+    transform: translateY(-1px);
+}
+
+/* Screenshot button — sits below the modal, inside the overlay gap */
+.modal-screenshot-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 20px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    letter-spacing: 0.03em;
+}
+
+.modal-screenshot-btn svg {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+}
+
+.modal-screenshot-btn:hover {
+    background: rgba(27, 177, 231, 0.2);
+    border-color: var(--sky-blue);
+    color: var(--sky-blue);
+    transform: translateY(-1px);
+}
+
 /* ============================================
    Navigation Tabs
    ============================================ */
@@ -382,10 +439,10 @@ input, select, textarea, button {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    color: var(--text-secondary);
+    color: var(--text-primary);
     font-family: inherit;
-    font-size: 0.8rem;
-    font-weight: 500;
+    font-size: 0.875rem;
+    font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -393,7 +450,7 @@ input, select, textarea, button {
 .tab-btn svg {
     width: 16px;
     height: 16px;
-    opacity: 0.7;
+    opacity: 1;
 }
 
 .tab-btn:hover {
@@ -438,7 +495,7 @@ input, select, textarea, button {
 }
 
 .loading p {
-    color: var(--text-secondary);
+    color: var(--text-primary);
     font-size: 0.85rem;
 }
 
@@ -508,9 +565,9 @@ input, select, textarea, button {
 }
 
 .stat-abbrev {
-    font-size: 0.7rem;
+    font-size: 0.9rem;
     font-weight: 700;
-    color: var(--text-muted);
+    color: var(--text-primary);
     text-transform: uppercase;
     letter-spacing: 0.08em;
 }
@@ -518,34 +575,34 @@ input, select, textarea, button {
 .rank-badge {
     padding: 2px 8px;
     border-radius: 10px;
-    font-size: 0.65rem;
+    font-size: 0.78rem;
     font-weight: 700;
 }
 
 /* Rank-based badge colors */
 .rank-excellent .rank-badge {
-    background: var(--rank-excellent-bg);
-    color: var(--rank-excellent);
+    background: rgba(16, 185, 129, 0.55);
+    color: #ffffff;
 }
 
 .rank-good .rank-badge {
-    background: var(--rank-good-bg);
-    color: var(--rank-good);
+    background: rgba(96, 165, 250, 0.55);
+    color: #ffffff;
 }
 
 .rank-average .rank-badge {
-    background: var(--rank-average-bg);
-    color: var(--rank-average);
+    background: rgba(245, 158, 11, 0.55);
+    color: #ffffff;
 }
 
 .rank-poor .rank-badge {
-    background: var(--rank-poor-bg);
-    color: var(--rank-poor);
+    background: rgba(255, 96, 96, 0.55);
+    color: #ffffff;
 }
 
 /* Main stat value */
 .stat-value {
-    font-size: 1.6rem;
+    font-size: 1.85rem;
     font-weight: 800;
     letter-spacing: -0.02em;
     line-height: 1;
@@ -555,12 +612,13 @@ input, select, textarea, button {
 .rank-good .stat-value { color: var(--rank-good); }
 .rank-average .stat-value { color: var(--rank-average); }
 .rank-poor .stat-value { color: var(--rank-poor); }
-.rank-none .stat-value { color: var(--text-secondary); }
+.rank-none .stat-value { color: var(--text-primary); }
 
 /* Stat name */
 .stat-name {
-    font-size: 0.7rem;
-    color: var(--text-secondary);
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-primary);
     line-height: 1.2;
 }
 
@@ -584,9 +642,9 @@ input, select, textarea, button {
 }
 
 .rank-excellent .rank-bar { background: linear-gradient(90deg, var(--rank-excellent) 0%, #34D399 100%); }
-.rank-good .rank-bar { background: linear-gradient(90deg, var(--rank-good) 0%, #60A5FA 100%); }
+.rank-good .rank-bar { background: linear-gradient(90deg, var(--rank-good) 0%, #93C5FD 100%); }
 .rank-average .rank-bar { background: linear-gradient(90deg, var(--rank-average) 0%, #FBBF24 100%); }
-.rank-poor .rank-bar { background: linear-gradient(90deg, var(--rank-poor) 0%, #F87171 100%); }
+.rank-poor .rank-bar { background: linear-gradient(90deg, var(--rank-poor) 0%, #FF8080 100%); }
 
 .rank-positions {
     position: absolute;
@@ -613,7 +671,7 @@ input, select, textarea, button {
 
 /* Rank label */
 .rank-label {
-    font-size: 0.6rem;
+    font-size: 0.8rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -624,7 +682,7 @@ input, select, textarea, button {
 .rank-good .rank-label { color: var(--rank-good); }
 .rank-average .rank-label { color: var(--rank-average); }
 .rank-poor .rank-label { color: var(--rank-poor); }
-.rank-label.no-rank { color: var(--text-muted); }
+.rank-label.no-rank { color: var(--text-secondary); }
 
 /* ============================================
    Card Border Accents
@@ -662,7 +720,7 @@ input, select, textarea, button {
     justify-content: center;
     gap: 12px;
     padding: 40px;
-    color: var(--text-muted);
+    color: var(--text-secondary);
 }
 
 .error-state svg {
@@ -685,7 +743,7 @@ input, select, textarea, button {
     padding-top: 8px;
     border-top: 1px solid var(--border-color);
     font-size: 0.7rem;
-    color: var(--text-muted);
+    color: var(--text-secondary);
 }
 
 .footer .divider {
@@ -809,11 +867,11 @@ input, select, textarea, button {
     }
 
     .stat-value {
-        font-size: 1.3rem;
+        font-size: 1.5rem;
     }
 
     .stat-name {
-        font-size: 0.65rem;
+        font-size: 0.75rem;
     }
 
     .rank-bar-container {
@@ -887,24 +945,24 @@ input, select, textarea, button {
     }
 
     .stat-abbrev {
-        font-size: 0.6rem;
+        font-size: 0.7rem;
     }
 
     .rank-badge {
-        font-size: 0.55rem;
+        font-size: 0.62rem;
         padding: 1px 6px;
     }
 
     .stat-value {
-        font-size: 1.1rem;
+        font-size: 1.25rem;
     }
 
     .stat-name {
-        font-size: 0.6rem;
+        font-size: 0.68rem;
     }
 
     .rank-label {
-        font-size: 0.55rem;
+        font-size: 0.62rem;
     }
 
     .pos-dot {
@@ -975,15 +1033,6 @@ input, select, textarea, button {
     position: relative;
 }
 
-/* Scrollable content area (tabs + stats) */
-.compare-content-area {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    min-height: 0;
-    overflow: hidden;
-}
 
 /* ============================================
    Matchup Header - The Hero Section
@@ -1062,7 +1111,7 @@ input, select, textarea, button {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    color: var(--text-muted);
+    color: var(--text-secondary);
 }
 
 /* VS Badge - Center */
@@ -1115,6 +1164,10 @@ input, select, textarea, button {
     padding: 4px 12px;
     background: rgba(27, 177, 231, 0.1);
     border-radius: 20px;
+}
+
+.matchup-category:empty {
+    display: none;
 }
 
 /* ============================================
@@ -1179,7 +1232,7 @@ input, select, textarea, button {
 .compare-dropdown-arrow {
     width: 18px;
     height: 18px;
-    color: var(--text-secondary);
+    color: var(--text-primary);
     transition: transform 0.2s ease;
     flex-shrink: 0;
 }
@@ -1224,7 +1277,7 @@ input, select, textarea, button {
 .compare-dropdown-search svg {
     width: 16px;
     height: 16px;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     flex-shrink: 0;
 }
 
@@ -1239,7 +1292,7 @@ input, select, textarea, button {
 }
 
 .compare-dropdown-search input::placeholder {
-    color: var(--text-muted);
+    color: var(--text-secondary);
 }
 
 .compare-dropdown-list {
@@ -1266,7 +1319,7 @@ input, select, textarea, button {
     cursor: pointer;
     transition: all 0.15s ease;
     font-size: 0.9rem;
-    color: var(--text-secondary);
+    color: var(--text-primary);
 }
 
 .compare-dropdown-item:hover {
@@ -1281,92 +1334,81 @@ input, select, textarea, button {
 }
 
 /* ============================================
-   Compare Category Tabs
+   Compare Category Picker
    ============================================ */
+
+.compare-picker {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    padding: 20px 0;
+}
+
+.compare-picker-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-secondary);
+}
 
 .compare-tabs {
     display: flex;
-    gap: 8px;
-    flex-shrink: 0;
-    overflow-x: auto;
-    padding: 4px;
-    background: var(--bg-secondary);
-    border-radius: 12px;
-    z-index: 1;
-}
-
-.compare-tabs::-webkit-scrollbar {
-    height: 0;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
 }
 
 .compare-tab-btn {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 8px;
-    padding: 10px 18px;
-    background: transparent;
-    border: none;
-    border-radius: 8px;
-    color: var(--text-secondary);
+    gap: 12px;
+    padding: 22px 20px 18px;
+    min-width: 130px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    color: var(--text-primary);
     font-family: inherit;
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
-    white-space: nowrap;
 }
 
 .compare-tab-btn svg {
-    width: 16px;
-    height: 16px;
-    opacity: 0.6;
+    width: 28px;
+    height: 28px;
+    opacity: 1;
+    transition: opacity 0.2s ease;
 }
 
 .compare-tab-btn:hover {
-    background: var(--bg-card);
+    background: var(--bg-card-hover);
+    border-color: var(--claret);
     color: var(--text-primary);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
 .compare-tab-btn:hover svg {
-    opacity: 0.8;
+    opacity: 1;
 }
 
 .compare-tab-btn.active {
     background: linear-gradient(135deg, var(--claret) 0%, var(--claret-dark) 100%);
+    border-color: var(--claret);
     color: white;
-    box-shadow: 0 4px 12px rgba(122, 38, 58, 0.3);
+    box-shadow: 0 8px 24px rgba(122, 38, 58, 0.4);
+    transform: translateY(-3px);
 }
 
 .compare-tab-btn.active svg {
     opacity: 1;
-}
-
-/* ============================================
-   Compare Stats Container
-   ============================================ */
-
-.compare-stats {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding-right: 8px;
-    min-height: 0;
-}
-
-.compare-stats::-webkit-scrollbar {
-    width: 6px;
-}
-
-.compare-stats::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.compare-stats::-webkit-scrollbar-thumb {
-    background: var(--claret);
-    border-radius: 3px;
 }
 
 /* ============================================
@@ -1453,7 +1495,7 @@ input, select, textarea, button {
 .stat-rank {
     font-size: 0.7rem;
     font-weight: 600;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     padding: 2px 8px;
     background: rgba(255, 255, 255, 0.05);
     border-radius: 10px;
@@ -1495,19 +1537,17 @@ input, select, textarea, button {
 
 /* Loser Styling */
 .stat-cell.loser {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.02) 100%);
-    border: 1px solid rgba(239, 68, 68, 0.15);
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .stat-cell.loser .stat-main-value {
-    color: var(--rank-poor);
-    opacity: 0.8;
+    color: var(--text-primary);
 }
 
 .stat-cell.loser .stat-rank {
-    background: rgba(239, 68, 68, 0.1);
-    color: var(--rank-poor);
-    opacity: 0.7;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
 }
 
 /* Draw Styling */
@@ -1516,7 +1556,7 @@ input, select, textarea, button {
 }
 
 .stat-cell.draw .stat-main-value {
-    color: var(--text-secondary);
+    color: var(--text-primary);
 }
 
 /* ============================================
@@ -1537,7 +1577,7 @@ input, select, textarea, button {
     text-align: center;
 }
 
-.stat-abbrev {
+.stat-center .stat-abbrev {
     font-size: 0.95rem;
     font-weight: 800;
     color: var(--text-primary);
@@ -1545,9 +1585,10 @@ input, select, textarea, button {
     letter-spacing: 0.08em;
 }
 
-.stat-name {
+.stat-center .stat-name {
     font-size: 0.65rem;
-    color: var(--text-muted);
+    font-weight: 600;
+    color: var(--text-secondary);
     line-height: 1.3;
     max-width: 140px;
 }
@@ -1609,7 +1650,7 @@ input, select, textarea, button {
     align-items: center;
     justify-content: center;
     gap: 16px;
-    color: var(--text-muted);
+    color: var(--text-secondary);
 }
 
 .compare-stats .error-state svg {
@@ -1726,9 +1767,16 @@ input, select, textarea, button {
         font-size: 0.6rem;
     }
 
-    .compare-tabs {
-        padding: 3px;
-        gap: 4px;
+    .compare-tab-btn {
+        min-width: 100px;
+        padding: 18px 14px 14px;
+        font-size: 0.8rem;
+        gap: 10px;
+    }
+
+    .compare-tab-btn svg {
+        width: 22px;
+        height: 22px;
     }
 
     .compare-row {
@@ -1766,14 +1814,486 @@ input, select, textarea, button {
         width: 16px;
         height: 16px;
     }
+}
 
-    .compare-tab-btn svg {
-        display: none;
+/* ============================================
+   Category Stats Modal
+   ============================================ */
+
+.stat-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.82);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 8px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.stat-modal-overlay.open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.stat-modal {
+    background: var(--bg-secondary);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    width: 95vw;
+    height: calc(95vh - 52px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-shadow:
+        0 30px 80px rgba(0, 0, 0, 0.7),
+        0 0 0 1px rgba(255, 255, 255, 0.05);
+    transform: scale(0.96) translateY(12px);
+    transition: transform 0.3s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+.stat-modal-overlay.open .stat-modal {
+    transform: scale(1) translateY(0);
+}
+
+/* Accent bar at very top */
+.stat-modal::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--claret) 0%, var(--sky-blue) 50%, var(--claret) 100%);
+    border-radius: 20px 20px 0 0;
+    z-index: 1;
+}
+
+/* Close button */
+.modal-close-btn {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    z-index: 10;
+    padding: 0;
+    font-family: inherit;
+}
+
+.modal-close-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.modal-close-btn:hover {
+    background: rgba(255, 96, 96, 0.2);
+    border-color: rgba(255, 96, 96, 0.4);
+    color: #FF6060;
+}
+
+/* ============================================
+   Modal Matchup Header
+   ============================================ */
+
+.modal-matchup-header {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 16px;
+    padding: 11px 54px 10px 24px;
+    background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.modal-team-block {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.modal-team-block.modal-left {
+    align-items: flex-start;
+}
+
+.modal-team-block.modal-right {
+    align-items: flex-end;
+}
+
+.modal-team-name {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+    line-height: 1.1;
+}
+
+.modal-wins-display {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+}
+
+.modal-wins-num {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    line-height: 1;
+    letter-spacing: -0.03em;
+    transition: color 0.3s ease;
+}
+
+.modal-wins-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-secondary);
+}
+
+.modal-wins-display.leading .modal-wins-num {
+    color: var(--rank-excellent);
+    text-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+}
+
+.modal-wins-display.trailing .modal-wins-num {
+    color: var(--text-primary);
+}
+
+/* Center block */
+.modal-center-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.modal-vs-badge {
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg, var(--claret) 0%, var(--claret-dark) 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    font-weight: 800;
+    color: white;
+    box-shadow:
+        0 4px 16px rgba(122, 38, 58, 0.4),
+        inset 0 2px 4px rgba(255, 255, 255, 0.1);
+}
+
+.modal-category-pill {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--sky-blue);
+    padding: 4px 12px;
+    background: rgba(27, 177, 231, 0.12);
+    border: 1px solid rgba(27, 177, 231, 0.2);
+    border-radius: 20px;
+}
+
+/* ============================================
+   Modal Stats Grid — 2-column layout
+   ============================================ */
+
+.modal-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-auto-rows: minmax(0, 1fr);
+    gap: 5px;
+    padding: 8px 12px 10px;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* ============================================
+   Modal Stat Item
+   ============================================ */
+
+.modal-stat-item {
+    display: grid;
+    grid-template-columns: 110px 1fr 110px;
+    align-items: stretch;
+    gap: 8px;
+    padding: 4px 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.modal-stat-item.animate-in {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Value cells */
+.modal-val-cell {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 4px 6px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.modal-val-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+}
+
+.modal-main-val {
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    transition: color 0.2s ease;
+}
+
+.modal-rank-pill {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+/* Winner state — bright green, clearly stands out */
+.modal-val-cell.winner {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.08) 100%);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.modal-val-cell.winner .modal-main-val {
+    color: #34D399;
+}
+
+.modal-val-cell.winner .modal-rank-pill {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34D399;
+}
+
+/* Loser state — dimmed grey, no red, stays readable */
+.modal-val-cell.loser {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.modal-val-cell.loser .modal-main-val {
+    color: var(--text-primary);
+}
+
+.modal-val-cell.loser .modal-rank-pill {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+}
+
+/* Draw state */
+.modal-val-cell.draw .modal-main-val {
+    color: var(--text-primary);
+}
+
+/* Center info column */
+.modal-stat-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-width: 0;
+}
+
+.modal-abbrev {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    line-height: 1;
+}
+
+.modal-stat-name-text {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    text-align: center;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+/* Mini comparison bar */
+.modal-bar {
+    display: flex;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.05);
+    margin-top: 3px;
+}
+
+.modal-bar-left,
+.modal-bar-right {
+    height: 100%;
+    transition: width 0.6s ease;
+}
+
+.modal-bar-left {
+    border-radius: 2px 0 0 2px;
+}
+
+.modal-bar-right {
+    border-radius: 0 2px 2px 0;
+}
+
+.modal-bar-left.winner,
+.modal-bar-right.winner {
+    background: linear-gradient(90deg, var(--rank-excellent), #34D399);
+    box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+}
+
+.modal-bar-left.loser,
+.modal-bar-right.loser {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.modal-bar-left.draw,
+.modal-bar-right.draw {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* ============================================
+   Modal Responsive
+   ============================================ */
+
+@media (max-width: 680px) {
+    .stat-modal-overlay {
+        padding: 4px;
     }
 
-    .compare-tab-btn {
-        padding: 7px 12px;
-        font-size: 0.7rem;
+    .stat-modal {
+        width: 100vw;
+        height: 100vh;
+        border-radius: 0;
+    }
+
+    .modal-matchup-header {
+        padding: 12px 16px 10px;
+        gap: 10px;
+    }
+
+    .modal-team-name {
+        font-size: 1rem;
+    }
+
+    .modal-wins-num {
+        font-size: 1.8rem;
+    }
+
+    .modal-vs-badge {
+        width: 48px;
+        height: 48px;
+        font-size: 0.95rem;
+    }
+
+    .modal-stats-grid {
+        grid-template-columns: 1fr;
+        padding: 8px 10px 10px;
+        gap: 5px;
+    }
+
+    .modal-stat-item {
+        grid-template-columns: 90px 1fr 90px;
+    }
+
+    .modal-main-val {
+        font-size: 1.5rem;
+    }
+
+    .modal-abbrev {
+        font-size: 0.85rem;
+    }
+
+    .modal-stat-name-text {
+        font-size: 0.65rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-matchup-header {
+        padding: 10px 12px 8px;
+    }
+
+    .modal-team-name {
+        font-size: 0.85rem;
+    }
+
+    .modal-wins-num {
+        font-size: 1.4rem;
+    }
+
+    .modal-wins-label {
+        font-size: 0.6rem;
+    }
+
+    .modal-vs-badge {
+        width: 40px;
+        height: 40px;
+        font-size: 0.8rem;
+    }
+
+    .modal-category-pill {
+        font-size: 0.65rem;
+        padding: 3px 8px;
+    }
+
+    .modal-stat-item {
+        grid-template-columns: 76px 1fr 76px;
+    }
+
+    .modal-main-val {
+        font-size: 1.25rem;
+    }
+
+    .modal-abbrev {
+        font-size: 0.78rem;
+    }
+
+    .modal-stat-name-text {
+        display: none;
     }
 }
 
@@ -1852,13 +2372,20 @@ input, select, textarea, button {
     }
 
     .compare-tabs {
-        border-radius: 8px;
+        gap: 8px;
     }
 
     .compare-tab-btn {
-        padding: 6px 10px;
-        font-size: 0.65rem;
-        border-radius: 6px;
+        min-width: 85px;
+        padding: 14px 10px 12px;
+        font-size: 0.72rem;
+        border-radius: 12px;
+        gap: 8px;
+    }
+
+    .compare-tab-btn svg {
+        width: 20px;
+        height: 20px;
     }
 
     .compare-row {
