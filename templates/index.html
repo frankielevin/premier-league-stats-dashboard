@@ -1173,54 +1173,86 @@
             }
         }
 
+        let currentH2HData = null;
+
         function renderH2HModal(data) {
-            const { team1, team2, played, overall, home, away, goals_for, goals_against, recent } = data;
+            currentH2HData = data;
+            renderH2HContent('all');
+        }
+
+        function renderH2HContent(filter) {
+            const { team1, team2, overall, home, away, recent } = currentH2HData;
+
+            let record, filteredRecent;
+            if (filter === 'home') {
+                record = home;
+                filteredRecent = recent.filter(m => m.home === team1);
+            } else if (filter === 'away') {
+                record = away;
+                filteredRecent = recent.filter(m => m.home === team2);
+            } else {
+                record = overall;
+                filteredRecent = recent;
+            }
+
+            const displayRecent = filteredRecent.slice(0, 6);
+            const played = record.w + record.d + record.l;
 
             let html = `
+                <div class="h2h-ground-filter">
+                    <button class="h2h-filter-btn ${filter === 'all'  ? 'active' : ''}" onclick="renderH2HContent('all')">All Grounds</button>
+                    <button class="h2h-filter-btn ${filter === 'home' ? 'active' : ''}" onclick="renderH2HContent('home')">${team1} at Home</button>
+                    <button class="h2h-filter-btn ${filter === 'away' ? 'active' : ''}" onclick="renderH2HContent('away')">${team2} at Home</button>
+                </div>
+
                 <div class="h2h-summary">
-                    <div class="h2h-played">${played} Premier League meetings</div>
+                    <div class="h2h-played">${played} Premier League meeting${played !== 1 ? 's' : ''}</div>
                     <div class="h2h-record">
                         <div class="h2h-stat-block h2h-win">
-                            <span class="h2h-stat-num">${overall.w}</span>
+                            <span class="h2h-stat-num">${record.w}</span>
                             <span class="h2h-stat-label">${team1} Wins</span>
                         </div>
                         <div class="h2h-stat-block h2h-draw">
-                            <span class="h2h-stat-num">${overall.d}</span>
+                            <span class="h2h-stat-num">${record.d}</span>
                             <span class="h2h-stat-label">Draws</span>
                         </div>
                         <div class="h2h-stat-block h2h-loss">
-                            <span class="h2h-stat-num">${overall.l}</span>
+                            <span class="h2h-stat-num">${record.l}</span>
                             <span class="h2h-stat-label">${team2} Wins</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="h2h-splits">
-                    <div class="h2h-split-col">
-                        <div class="h2h-split-title">At Home</div>
-                        <div class="h2h-split-record">
-                            <span class="h2h-split-w">${home.w}W</span>
-                            <span class="h2h-split-d">${home.d}D</span>
-                            <span class="h2h-split-l">${home.l}L</span>
-                        </div>
-                    </div>
-                    <div class="h2h-split-divider"></div>
-                    <div class="h2h-split-col">
-                        <div class="h2h-split-title">Away</div>
-                        <div class="h2h-split-record">
-                            <span class="h2h-split-w">${away.w}W</span>
-                            <span class="h2h-split-d">${away.d}D</span>
-                            <span class="h2h-split-l">${away.l}L</span>
                         </div>
                     </div>
                 </div>
             `;
 
-            if (recent && recent.length > 0) {
+            if (filter === 'all') {
+                html += `
+                    <div class="h2h-splits">
+                        <div class="h2h-split-col">
+                            <div class="h2h-split-title">At ${team1}'s Ground</div>
+                            <div class="h2h-split-record">
+                                <span class="h2h-split-w">${home.w}W</span>
+                                <span class="h2h-split-d">${home.d}D</span>
+                                <span class="h2h-split-l">${home.l}L</span>
+                            </div>
+                        </div>
+                        <div class="h2h-split-divider"></div>
+                        <div class="h2h-split-col">
+                            <div class="h2h-split-title">At ${team2}'s Ground</div>
+                            <div class="h2h-split-record">
+                                <span class="h2h-split-w">${away.w}W</span>
+                                <span class="h2h-split-d">${away.d}D</span>
+                                <span class="h2h-split-l">${away.l}L</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (displayRecent && displayRecent.length > 0) {
                 html += `<div class="h2h-recent-header">Recent Meetings</div>`;
                 html += `<div class="h2h-recent-list">`;
 
-                recent.forEach(match => {
+                displayRecent.forEach(match => {
                     const t1IsHome = match.home === team1;
                     const t1Score  = t1IsHome ? match.home_score : match.away_score;
                     const t2Score  = t1IsHome ? match.away_score : match.home_score;

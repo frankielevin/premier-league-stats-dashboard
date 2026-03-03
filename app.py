@@ -216,7 +216,7 @@ def fetch_h2h_data(team1_key, team2_key):
         "away":          {"w": aw, "d": ad, "l": al},
         "goals_for":     goals_for,
         "goals_against": goals_against,
-        "recent":        recent_matches[-6:][::-1],
+        "recent":        recent_matches[::-1],
     }
 
 
