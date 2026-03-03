@@ -1556,7 +1556,7 @@
 
             // Populate position + points from standings (async, fills in after open)
             getStandings().then(standings => {
-                const teamKey = allStats.team && allStats.team.key;
+                const teamKey = currentTeam;
                 if (standings && teamKey && standings[teamKey]) {
                     const s = standings[teamKey];
                     overviewTeamMetaEl.textContent = `${ordinal(s.position)} · ${s.points} pts`;
