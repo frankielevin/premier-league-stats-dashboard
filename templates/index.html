@@ -310,7 +310,10 @@
             </button>
 
             <div class="overview-header">
-                <div class="overview-team-name" id="overview-team-name">West Ham United</div>
+                <div class="overview-team-info">
+                    <div class="overview-team-name" id="overview-team-name">West Ham United</div>
+                    <div class="overview-team-meta" id="overview-team-meta"></div>
+                </div>
                 <div class="overview-pill">OVERVIEW</div>
             </div>
 
@@ -1483,12 +1486,34 @@
         const overviewModalOverlay = document.getElementById('overview-modal-overlay');
         const overviewCloseBtn     = document.getElementById('overview-close-btn');
         const overviewTeamNameEl   = document.getElementById('overview-team-name');
+        const overviewTeamMetaEl   = document.getElementById('overview-team-meta');
         const overviewStatsContent = document.getElementById('overview-stats-content');
 
-        function openOverviewModal() {
+        function ordinal(n) {
+            const s = ['th','st','nd','rd'];
+            const v = n % 100;
+            return n + (s[(v - 20) % 10] || s[v] || s[0]);
+        }
+
+        // Fetch standings once and cache in JS
+        let _standingsCache = null;
+        async function getStandings() {
+            if (_standingsCache) return _standingsCache;
+            try {
+                const r = await fetch('/api/standings');
+                _standingsCache = await r.json();
+            } catch (e) {
+                _standingsCache = {};
+            }
+            return _standingsCache;
+        }
+
+        async function openOverviewModal() {
             if (!allStats || !allStats.attacking) return;
 
-            overviewTeamNameEl.textContent = document.getElementById('selected-team-name').textContent.trim();
+            const teamName = document.getElementById('selected-team-name').textContent.trim();
+            overviewTeamNameEl.textContent = teamName;
+            overviewTeamMetaEl.textContent = '';  // clear while loading
 
             function buildSection(section) {
                 let h = `<div class="overview-section-header">${section.label}</div>`;
@@ -1528,6 +1553,15 @@
             overviewStatsContent.innerHTML = html;
             overviewModalOverlay.classList.add('open');
             document.body.style.overflow = 'hidden';
+
+            // Populate position + points from standings (async, fills in after open)
+            getStandings().then(standings => {
+                const teamKey = allStats.team && allStats.team.key;
+                if (standings && teamKey && standings[teamKey]) {
+                    const s = standings[teamKey];
+                    overviewTeamMetaEl.textContent = `${ordinal(s.position)} · ${s.points} pts`;
+                }
+            });
 
             requestAnimationFrame(() => {
                 overviewStatsContent.querySelectorAll('.overview-stat-row').forEach((el, i) => {

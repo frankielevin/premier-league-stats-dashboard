@@ -94,6 +94,58 @@ PL_API_HEADERS = {
 # In-memory H2H cache — keyed by sorted team ID pair, TTL 4 hours
 _h2h_cache = {}
 
+# In-memory standings cache — TTL 6 hours
+_standings_cache = {}
+
+
+def fetch_standings():
+    """Fetch current PL standings. Returns dict keyed by app team key."""
+    if _standings_cache:
+        cached = next(iter(_standings_cache.values()))
+        if time.time() - cached["ts"] < 21600:
+            return cached["data"]
+
+    # Discover current season ID from the latest fixture
+    season_id = 777  # 2025/26 fallback
+    try:
+        r = requests.get(
+            "https://footballapi.pulselive.com/football/fixtures?pageSize=1&comps=1&sort=desc",
+            headers=PL_API_HEADERS, timeout=8
+        )
+        r.raise_for_status()
+        fixtures = r.json().get("content", [])
+        if fixtures:
+            season_id = int(fixtures[0]["gameweek"]["compSeason"]["id"])
+    except Exception:
+        pass
+
+    try:
+        r = requests.get(
+            f"https://footballapi.pulselive.com/football/standings?compSeasons={season_id}&pageSize=20&comps=1",
+            headers=PL_API_HEADERS, timeout=8
+        )
+        r.raise_for_status()
+        entries = r.json()["tables"][0]["entries"]
+    except Exception as e:
+        return {"error": str(e)}
+
+    # Build reverse lookup: PL team ID → app team key
+    id_to_key = {v: k for k, v in PL_TEAM_IDS.items()}
+
+    result = {}
+    for e in entries:
+        pl_id = e["team"]["id"]
+        key = id_to_key.get(pl_id)
+        if key:
+            result[key] = {
+                "position": e["position"],
+                "points":   e["overall"]["points"],
+                "played":   e["overall"]["played"],
+            }
+
+    _standings_cache["data"] = {"data": result, "ts": time.time()}
+    return result
+
 # knocksandbans.com slugs for team news scraping
 KNOCKSANDBANS_SLUGS = {
     "arsenal":           "arsenal",
@@ -502,6 +554,12 @@ def get_h2h():
         return jsonify({"error": "Please select two different teams."}), 400
 
     return jsonify(fetch_h2h_data(team1_key, team2_key))
+
+
+@app.route('/api/standings')
+def get_standings():
+    """API endpoint to get current PL standings for all teams."""
+    return jsonify(fetch_standings())
 
 
 @app.route('/api/team-news')
