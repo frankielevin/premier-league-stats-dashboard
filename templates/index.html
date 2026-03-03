@@ -1267,13 +1267,16 @@
                     if (t1Score > t2Score) resultClass = 'win';
                     else if (t1Score < t2Score) resultClass = 'loss';
 
+                    const homeWon = match.home_score > match.away_score;
+                    const awayWon = match.away_score > match.home_score;
+
                     html += `
                         <div class="h2h-match-row ${resultClass}">
                             <span class="h2h-match-date">${match.date}</span>
                             <div class="h2h-match-score">
-                                <span class="h2h-match-team ${match.home === team1 ? 'is-team1' : ''}">${match.home}</span>
+                                <span class="h2h-match-team ${match.home === team1 ? 'is-team1' : ''} ${homeWon ? 'winner' : ''}">${match.home}</span>
                                 <span class="h2h-score-box">${match.home_score} – ${match.away_score}</span>
-                                <span class="h2h-match-team ${match.away === team1 ? 'is-team1' : ''}">${match.away}</span>
+                                <span class="h2h-match-team ${match.away === team1 ? 'is-team1' : ''} ${awayWon ? 'winner' : ''}">${match.away}</span>
                             </div>
                             <span class="h2h-match-season">${match.season}</span>
                         </div>

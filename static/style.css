@@ -2725,6 +2725,10 @@ input, select, textarea, button {
 }
 
 .h2h-match-team.is-team1 {
+    color: var(--text-primary);
+}
+
+.h2h-match-team.winner {
     font-weight: 700;
     color: var(--text-primary);
 }
