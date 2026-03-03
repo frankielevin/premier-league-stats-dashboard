@@ -2491,7 +2491,7 @@ input, select, textarea, button {
    ============================================ */
 
 .h2h-modal {
-    max-width: 620px;
+    max-width: 760px;
     max-height: 90vh;
     display: flex;
     flex-direction: column;
@@ -2562,9 +2562,9 @@ input, select, textarea, button {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 18px 28px;
+    padding: 18px 32px;
     border-radius: 10px;
-    min-width: 96px;
+    min-width: 130px;
 }
 
 .h2h-stat-num {
@@ -2575,7 +2575,7 @@ input, select, textarea, button {
 }
 
 .h2h-stat-label {
-    font-size: 0.65rem;
+    font-size: 0.75rem;
     font-weight: 700;
     color: rgba(255,255,255,0.8);
     letter-spacing: 0.12em;
