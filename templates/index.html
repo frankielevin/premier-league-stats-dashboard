@@ -1386,33 +1386,37 @@
                     const badgeClass = p.type === 'suspended' ? 'badge-suspended'
                                      : p.type === 'out'       ? 'badge-out'
                                      :                          'badge-doubt';
-                    const icon = p.type === 'suspended'
-                        ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18"/></svg>`
-                        : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 8v4M12 16h.01"/></svg>`;
+                    const rowClass   = p.type === 'suspended' ? 'row-suspended'
+                                     : p.type === 'out'       ? 'row-out'
+                                     :                          'row-doubt';
+                    const returnText = p.return && p.return !== 'Unknown'
+                                     ? `Returns ${p.return}` : 'Return unknown';
                     return `
-                        <div class="news-player-row">
-                            <div class="news-player-left">
-                                <span class="news-type-icon">${icon}</span>
-                                <div class="news-player-info">
-                                    <span class="news-player-name">${p.name}</span>
-                                    <span class="news-player-reason">${p.reason}</span>
-                                </div>
-                            </div>
-                            <div class="news-player-right">
+                        <div class="news-player-row ${rowClass}">
+                            <div class="news-row-top">
+                                <span class="news-player-name">${p.name}</span>
                                 <span class="news-status-badge ${badgeClass}">${p.status}</span>
-                                <span class="news-return-date">${p.return}</span>
+                            </div>
+                            <div class="news-row-bottom">
+                                <span class="news-player-reason">${p.reason || '—'}</span>
+                                <span class="news-return-date">${returnText}</span>
                             </div>
                         </div>`;
                 }).join('');
             }
 
+            const count1 = data.team1.players ? data.team1.players.length : 0;
+            const count2 = data.team2.players ? data.team2.players.length : 0;
+
             newsBody.innerHTML = `
                 <div class="news-columns">
                     <div class="news-col">
+                        <div class="news-col-header">${count1} absentee${count1 !== 1 ? 's' : ''}</div>
                         ${renderPlayers(data.team1)}
                     </div>
                     <div class="news-col-divider"></div>
                     <div class="news-col">
+                        <div class="news-col-header">${count2} absentee${count2 !== 1 ? 's' : ''}</div>
                         ${renderPlayers(data.team2)}
                     </div>
                 </div>
