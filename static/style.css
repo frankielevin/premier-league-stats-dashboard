@@ -2492,7 +2492,8 @@ input, select, textarea, button {
 
 .h2h-modal {
     max-width: 860px;
-    max-height: 96vh;
+    height: auto !important;
+    max-height: 94vh;
     display: flex;
     flex-direction: column;
 }
@@ -2531,15 +2532,15 @@ input, select, textarea, button {
 
 .h2h-body {
     flex: 1;
-    overflow-y: hidden;
-    padding: 14px 28px 14px;
+    overflow-y: auto;
+    padding: 12px 28px 12px;
 }
 
 /* ---- Ground filter ---- */
 .h2h-ground-filter {
     display: flex;
     gap: 8px;
-    margin-bottom: 14px;
+    margin-bottom: 10px;
     flex-wrap: wrap;
 }
 
@@ -2573,7 +2574,7 @@ input, select, textarea, button {
 
 .h2h-summary {
     text-align: center;
-    margin-bottom: 14px;
+    margin-bottom: 10px;
 }
 
 .h2h-played {
@@ -2582,7 +2583,7 @@ input, select, textarea, button {
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 .h2h-record {
@@ -2595,13 +2596,13 @@ input, select, textarea, button {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 14px 32px;
+    padding: 11px 32px;
     border-radius: 10px;
     min-width: 140px;
 }
 
 .h2h-stat-num {
-    font-size: 2.8rem;
+    font-size: 2.5rem;
     font-weight: 800;
     line-height: 1;
     color: #fff;
@@ -2612,7 +2613,7 @@ input, select, textarea, button {
     font-weight: 700;
     color: rgba(255,255,255,0.8);
     letter-spacing: 0.08em;
-    margin-top: 6px;
+    margin-top: 5px;
     text-align: center;
 }
 
@@ -2630,8 +2631,8 @@ input, select, textarea, button {
     background: rgba(255,255,255,0.04);
     border: 1px solid var(--border-color);
     border-radius: 10px;
-    padding: 12px 20px;
-    margin-bottom: 14px;
+    padding: 10px 20px;
+    margin-bottom: 10px;
 }
 
 .h2h-split-col {
@@ -2645,7 +2646,7 @@ input, select, textarea, button {
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.09em;
-    margin-bottom: 7px;
+    margin-bottom: 5px;
 }
 
 .h2h-split-record {
@@ -2681,7 +2682,7 @@ input, select, textarea, button {
 .h2h-recent-list {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 5px;
 }
 
 .h2h-match-row {
@@ -2689,7 +2690,7 @@ input, select, textarea, button {
     grid-template-columns: 92px 1fr 64px;
     align-items: center;
     gap: 10px;
-    padding: 10px 14px;
+    padding: 8px 14px;
     border-radius: 7px;
     border: 1px solid transparent;
 }
