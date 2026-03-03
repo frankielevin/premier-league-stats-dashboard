@@ -138,7 +138,8 @@ def fetch_h2h_data(team1_key, team2_key):
 
             all_fixtures.extend(content)
 
-            if len(all_fixtures) >= data.get("numEntries", 0):
+            page_info = data.get("pageInfo", {})
+            if page >= page_info.get("numPages", 1) - 1:
                 break
 
             page += 1
