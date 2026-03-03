@@ -1135,15 +1135,21 @@
         document.getElementById('h2h-btn').addEventListener('click', openH2HModal);
 
         async function openH2HModal() {
-            const team1 = compareDropdown1.dataset.value;
-            const team2 = compareDropdown2.dataset.value;
+            let team1 = compareDropdown1.dataset.value;
+            let team2 = compareDropdown2.dataset.value;
 
             if (team1 === team2) {
                 return;
             }
 
-            const t1Name = compareDropdown1.querySelector('.compare-selected-team').textContent.trim();
-            const t2Name = compareDropdown2.querySelector('.compare-selected-team').textContent.trim();
+            let t1Name = compareDropdown1.querySelector('.compare-selected-team').textContent.trim();
+            let t2Name = compareDropdown2.querySelector('.compare-selected-team').textContent.trim();
+
+            // Always show West Ham on the left (team1) side
+            if (team2 === 'west-ham') {
+                [team1, team2] = [team2, team1];
+                [t1Name, t2Name] = [t2Name, t1Name];
+            }
 
             h2hTeam1Name.textContent = t1Name;
             h2hTeam2Name.textContent = t2Name;
