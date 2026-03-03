@@ -225,6 +225,18 @@
                 </div>
             </div>
 
+            <!-- Head to Head button -->
+            <div class="h2h-btn-wrap">
+                <button class="h2h-launch-btn" id="h2h-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+                    </svg>
+                    Head to Head Records
+                </button>
+            </div>
+
             <!-- Hidden — kept for JS compatibility -->
             <div class="compare-stats" id="compare-stats" style="display:none"></div>
         </main>
@@ -296,6 +308,27 @@
             </div>
 
             <div class="overview-stats-content" id="overview-stats-content">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Head to Head Modal -->
+    <div class="stat-modal-overlay" id="h2h-modal-overlay">
+        <div class="stat-modal h2h-modal" id="h2h-modal">
+            <button class="modal-close-btn" id="h2h-close-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+            </button>
+
+            <div class="h2h-header">
+                <div class="h2h-team-name" id="h2h-team1-name"></div>
+                <div class="h2h-pill">HEAD TO HEAD</div>
+                <div class="h2h-team-name h2h-right" id="h2h-team2-name"></div>
+            </div>
+
+            <div class="h2h-body" id="h2h-body">
                 <!-- Populated by JS -->
             </div>
         </div>
@@ -1087,6 +1120,145 @@
             const t2 = document.getElementById('modal-team2-name').textContent.trim().replace(/\s+/g, '-');
             const cat = document.getElementById('modal-category-pill').textContent.trim().toLowerCase();
             captureElement(document.getElementById('stat-modal'), `${t1}-vs-${t2}-${cat}.png`);
+        });
+
+        // ============================================
+        //  Head to Head Modal
+        // ============================================
+
+        const h2hModalOverlay = document.getElementById('h2h-modal-overlay');
+        const h2hCloseBtn     = document.getElementById('h2h-close-btn');
+        const h2hTeam1Name    = document.getElementById('h2h-team1-name');
+        const h2hTeam2Name    = document.getElementById('h2h-team2-name');
+        const h2hBody         = document.getElementById('h2h-body');
+
+        document.getElementById('h2h-btn').addEventListener('click', openH2HModal);
+
+        async function openH2HModal() {
+            const team1 = compareDropdown1.dataset.value;
+            const team2 = compareDropdown2.dataset.value;
+
+            if (team1 === team2) {
+                return;
+            }
+
+            const t1Name = compareDropdown1.querySelector('.compare-selected-team').textContent.trim();
+            const t2Name = compareDropdown2.querySelector('.compare-selected-team').textContent.trim();
+
+            h2hTeam1Name.textContent = t1Name;
+            h2hTeam2Name.textContent = t2Name;
+
+            h2hBody.innerHTML = `
+                <div class="h2h-loading">
+                    <div class="loading-spinner"></div>
+                    <p>Fetching Premier League records…</p>
+                </div>
+            `;
+
+            h2hModalOverlay.classList.add('open');
+            document.body.style.overflow = 'hidden';
+
+            try {
+                const resp = await fetch(`/api/h2h?team1=${team1}&team2=${team2}`);
+                const data = await resp.json();
+
+                if (data.error) {
+                    h2hBody.innerHTML = `<div class="h2h-error">${data.error}</div>`;
+                    return;
+                }
+
+                renderH2HModal(data);
+            } catch (err) {
+                h2hBody.innerHTML = `<div class="h2h-error">Failed to load head to head data. Please try again.</div>`;
+            }
+        }
+
+        function renderH2HModal(data) {
+            const { team1, team2, played, overall, home, away, goals_for, goals_against, recent } = data;
+
+            let html = `
+                <div class="h2h-summary">
+                    <div class="h2h-played">${played} Premier League meetings</div>
+                    <div class="h2h-record">
+                        <div class="h2h-stat-block h2h-win">
+                            <span class="h2h-stat-num">${overall.w}</span>
+                            <span class="h2h-stat-label">WIN</span>
+                        </div>
+                        <div class="h2h-stat-block h2h-draw">
+                            <span class="h2h-stat-num">${overall.d}</span>
+                            <span class="h2h-stat-label">DRAW</span>
+                        </div>
+                        <div class="h2h-stat-block h2h-loss">
+                            <span class="h2h-stat-num">${overall.l}</span>
+                            <span class="h2h-stat-label">LOSS</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="h2h-splits">
+                    <div class="h2h-split-col">
+                        <div class="h2h-split-title">At Home</div>
+                        <div class="h2h-split-record">
+                            <span class="h2h-split-w">${home.w}W</span>
+                            <span class="h2h-split-d">${home.d}D</span>
+                            <span class="h2h-split-l">${home.l}L</span>
+                        </div>
+                    </div>
+                    <div class="h2h-split-divider"></div>
+                    <div class="h2h-split-col">
+                        <div class="h2h-split-title">Away</div>
+                        <div class="h2h-split-record">
+                            <span class="h2h-split-w">${away.w}W</span>
+                            <span class="h2h-split-d">${away.d}D</span>
+                            <span class="h2h-split-l">${away.l}L</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            if (recent && recent.length > 0) {
+                html += `<div class="h2h-recent-header">Recent Meetings</div>`;
+                html += `<div class="h2h-recent-list">`;
+
+                recent.forEach(match => {
+                    const t1IsHome = match.home === team1;
+                    const t1Score  = t1IsHome ? match.home_score : match.away_score;
+                    const t2Score  = t1IsHome ? match.away_score : match.home_score;
+
+                    let resultClass = 'draw';
+                    if (t1Score > t2Score) resultClass = 'win';
+                    else if (t1Score < t2Score) resultClass = 'loss';
+
+                    html += `
+                        <div class="h2h-match-row ${resultClass}">
+                            <span class="h2h-match-date">${match.date}</span>
+                            <div class="h2h-match-score">
+                                <span class="h2h-match-team ${match.home === team1 ? 'is-team1' : ''}">${match.home}</span>
+                                <span class="h2h-score-box">${match.home_score} – ${match.away_score}</span>
+                                <span class="h2h-match-team ${match.away === team1 ? 'is-team1' : ''}">${match.away}</span>
+                            </div>
+                            <span class="h2h-match-season">${match.season}</span>
+                        </div>
+                    `;
+                });
+
+                html += `</div>`;
+            }
+
+            h2hBody.innerHTML = html;
+        }
+
+        function closeH2HModal() {
+            h2hModalOverlay.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        h2hCloseBtn.addEventListener('click', closeH2HModal);
+        h2hModalOverlay.addEventListener('click', (e) => {
+            if (e.target === h2hModalOverlay) closeH2HModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && h2hModalOverlay.classList.contains('open')) closeH2HModal();
         });
 
         // ============================================
