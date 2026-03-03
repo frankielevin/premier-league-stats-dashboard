@@ -2835,7 +2835,7 @@ input, select, textarea, button {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 28px 12px;
+    padding: 16px 54px 12px 28px;
     border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
 }
