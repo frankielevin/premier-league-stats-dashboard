@@ -365,10 +365,11 @@
         let currentTeam = 'west-ham';
         let isCompareMode = false;
 
-        // StatMuse consistently ranks ALL stats with rank 1 = best performance.
-        // For negative metrics (ERR-SH, xGA, GC etc.) rank 1 = fewest = best, so no inversion is needed.
-        // LOWER_IS_BETTER (below) handles compare-mode winner logic independently.
-        const INVERTED_STATS = [];
+        // Stats where StatMuse ranks by highest raw value first (rank 1 = most = worst for these stats)
+        // Only these need the colour mapping inverted. Other lower-is-better stats (GC, YC, etc.)
+        // are already ranked by StatMuse with rank 1 = best (fewest), so no inversion needed.
+        // ERR-SH excluded: StatMuse ranks it ascending (rank 1 = fewest errors = best).
+        const INVERTED_STATS = ['xGA', 'ERR-G', 'PKC', 'OG', 'AER-L', 'DUEL-L', 'POSS-L'];
 
         // Stats where LOWER raw value is better — used by compare mode to decide the winner
         const LOWER_IS_BETTER = ['OFF', 'xGA', 'TKL-LM', 'ERR-SH', 'ERR-G', 'PKC', 'OG', 'GC', 'GC/M', 'YC', 'RC', 'FOUL', 'AER-L', 'DUEL-L', 'POSS-L'];
