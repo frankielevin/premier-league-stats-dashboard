@@ -2,6 +2,7 @@ from flask import Flask, render_template, jsonify, request
 import requests
 from bs4 import BeautifulSoup
 import time
+import re
 from datetime import datetime
 
 app = Flask(__name__)
@@ -92,6 +93,138 @@ PL_API_HEADERS = {
 
 # In-memory H2H cache — keyed by sorted team ID pair, TTL 4 hours
 _h2h_cache = {}
+
+# knocksandbans.com slugs for team news scraping
+KNOCKSANDBANS_SLUGS = {
+    "arsenal":           "arsenal",
+    "aston-villa":       "aston-villa",
+    "bournemouth":       "bournemouth",
+    "brentford":         "brentford",
+    "brighton":          "brighton-hove-albion",
+    "burnley":           "burnley",
+    "chelsea":           "chelsea",
+    "crystal-palace":    "crystal-palace",
+    "everton":           "everton",
+    "fulham":            "fulham",
+    "leeds":             "leeds-united",
+    "liverpool":         "liverpool",
+    "man-city":          "manchester-city",
+    "man-united":        "manchester-united",
+    "newcastle":         "newcastle-united",
+    "nottingham-forest": "nottingham-forest",
+    "sunderland":        "sunderland",
+    "tottenham":         "tottenham-hotspur",
+    "west-ham":          "west-ham-united",
+    "wolves":            "wolverhampton-wanderers",
+}
+
+KNOCKSANDBANS_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Referer": "https://www.knocksandbans.com/",
+}
+
+# In-memory team-news cache — keyed by team key, TTL 1 hour
+_news_cache = {}
+
+
+def parse_team_news(html):
+    """Parse injury/suspension data from knocksandbans.com team page."""
+    soup = BeautifulSoup(html, "html.parser")
+    players = []
+
+    for a in soup.find_all("a", href=True):
+        text = a.get_text(separator=" ", strip=True)
+        if "Status:" not in text:
+            continue
+
+        strong = a.find("strong")
+        if not strong:
+            continue
+        name = strong.get_text(strip=True)
+
+        # Detect suspension by icon filename
+        imgs = a.find_all("img")
+        is_suspension = any("schorsing" in img.get("src", "") for img in imgs)
+
+        # Extract raw status (e.g. "OUT", "OUT (ban)", "75%", "50%", "25%")
+        raw_status = ""
+        status_match = re.search(r"Status:\s*([^\s].*?)(?:\s+Est\.|\s*$)", text)
+        if status_match:
+            raw_status = status_match.group(1).strip()
+
+        # Map to display label
+        if "ban" in raw_status.lower() or is_suspension:
+            status_label = "Suspended"
+            status_type  = "suspended"
+        elif "OUT" in raw_status.upper():
+            status_label = "OUT"
+            status_type  = "out"
+        else:
+            pct_match = re.search(r"(\d+)%", raw_status)
+            pct = int(pct_match.group(1)) if pct_match else 50
+            if pct >= 75:
+                status_label = "Slight Doubt"
+            elif pct >= 50:
+                status_label = "Doubtful"
+            else:
+                status_label = "Unlikely"
+            status_type = "doubtful"
+
+        # Extract reason (text between "- " and "Status:")
+        reason = ""
+        reason_match = re.search(r"-\s+(.+?)\s+Status:", text)
+        if reason_match:
+            reason = reason_match.group(1).strip().title()
+        if is_suspension or "ban" in raw_status.lower():
+            reason = "Suspension"
+
+        # Extract return date
+        return_date = "Unknown"
+        return_match = re.search(r"Est\.\s*Return\s+(.+)", text)
+        if return_match:
+            raw_date = return_match.group(1).strip()
+            # Reformat DD/MM/YY → DD Mon YYYY
+            try:
+                dt = datetime.strptime(raw_date, "%d/%m/%y")
+                return_date = dt.strftime("%-d %b %Y")
+            except Exception:
+                return_date = raw_date if raw_date else "Unknown"
+
+        players.append({
+            "name":   name,
+            "status": status_label,
+            "type":   status_type,
+            "reason": reason,
+            "return": return_date,
+        })
+
+    return players
+
+
+def fetch_team_news(team_key):
+    """Fetch injury/suspension list for a team from knocksandbans.com."""
+    slug = KNOCKSANDBANS_SLUGS.get(team_key)
+    if not slug:
+        return {"team": TEAMS.get(team_key, {}).get("name", team_key), "players": [], "error": "No data available."}
+
+    # Return cached data if still fresh (1 hour TTL)
+    if team_key in _news_cache:
+        cached = _news_cache[team_key]
+        if time.time() - cached["ts"] < 3600:
+            return cached["data"]
+
+    url = f"https://www.knocksandbans.com/{slug}"
+    try:
+        resp = requests.get(url, headers=KNOCKSANDBANS_HEADERS, timeout=10)
+        resp.raise_for_status()
+    except Exception as e:
+        return {"team": TEAMS[team_key]["name"], "players": [], "error": f"Could not fetch team news: {str(e)}"}
+
+    players = parse_team_news(resp.text)
+    data = {"team": TEAMS[team_key]["name"], "players": players}
+    _news_cache[team_key] = {"data": data, "ts": time.time()}
+    return data
 
 
 def fetch_h2h_data(team1_key, team2_key):
@@ -369,6 +502,23 @@ def get_h2h():
         return jsonify({"error": "Please select two different teams."}), 400
 
     return jsonify(fetch_h2h_data(team1_key, team2_key))
+
+
+@app.route('/api/team-news')
+def get_team_news():
+    """API endpoint to get injury/suspension news for both teams."""
+    team1_key = request.args.get('team1', 'west-ham')
+    team2_key = request.args.get('team2', 'arsenal')
+
+    if team1_key not in TEAMS:
+        team1_key = 'west-ham'
+    if team2_key not in TEAMS:
+        team2_key = 'arsenal'
+
+    return jsonify({
+        'team1': fetch_team_news(team1_key),
+        'team2': fetch_team_news(team2_key),
+    })
 
 
 if __name__ == '__main__':
