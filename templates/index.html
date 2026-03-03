@@ -100,6 +100,9 @@
             <button class="tab-btn tab-compare" data-category="compare">
                 Compare
             </button>
+            <button class="tab-btn tab-overview" data-category="overview">
+                Overview
+            </button>
         </nav>
 
         <!-- Loading State -->
@@ -278,6 +281,26 @@
         </button>
     </div>
 
+    <!-- Overview Modal -->
+    <div class="stat-modal-overlay" id="overview-modal-overlay">
+        <div class="stat-modal overview-modal" id="overview-modal">
+            <button class="modal-close-btn" id="overview-close-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+            </button>
+
+            <div class="overview-header">
+                <div class="overview-team-name" id="overview-team-name">West Ham United</div>
+                <div class="overview-pill">OVERVIEW</div>
+            </div>
+
+            <div class="overview-stats-content" id="overview-stats-content">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
     <script>
         const statsContainer = document.getElementById('stats-container');
         const compareContainer = document.getElementById('compare-container');
@@ -365,10 +388,15 @@
         // Tab switching
         tabBtns.forEach(btn => {
             btn.addEventListener('click', () => {
+                const category = btn.dataset.category;
+
+                if (category === 'overview') {
+                    openOverviewModal();
+                    return;
+                }
+
                 tabBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-
-                const category = btn.dataset.category;
 
                 if (category === 'compare') {
                     isCompareMode = true;
@@ -1059,6 +1087,119 @@
             const t2 = document.getElementById('modal-team2-name').textContent.trim().replace(/\s+/g, '-');
             const cat = document.getElementById('modal-category-pill').textContent.trim().toLowerCase();
             captureElement(document.getElementById('stat-modal'), `${t1}-vs-${t2}-${cat}.png`);
+        });
+
+        // ============================================
+        //  Overview Modal
+        // ============================================
+
+        const OVERVIEW_SECTIONS = [
+            {
+                label: 'Attacking',
+                stats: [
+                    { abbrev: 'G',       category: 'attacking' },
+                    { abbrev: 'G/M',     category: 'attacking' },
+                    { abbrev: 'xG',      category: 'attacking' },
+                    { abbrev: 'POSS%',   category: 'attacking' },
+                    { abbrev: 'SH',      category: 'attacking' },
+                    { abbrev: 'TCH-BOX', category: 'attacking' },
+                ]
+            },
+            {
+                label: 'Passing',
+                stats: [
+                    { abbrev: 'BCC',      category: 'passing' },
+                    { abbrev: 'PASS-KEY', category: 'passing' },
+                    { abbrev: 'CRS',      category: 'passing' },
+                ]
+            },
+            {
+                label: 'Defending',
+                stats: [
+                    { abbrev: 'TKL',    category: 'defending' },
+                    { abbrev: 'INT',    category: 'defending' },
+                    { abbrev: 'CLR',    category: 'defending' },
+                    { abbrev: 'ERR-SH', category: 'defending' },
+                ]
+            },
+            {
+                label: 'Goalkeeping',
+                stats: [
+                    { abbrev: 'GC',   category: 'goalkeeping' },
+                    { abbrev: 'xGA',  category: 'defending' },
+                    { abbrev: 'GC/M', category: 'goalkeeping' },
+                    { abbrev: 'CS',   category: 'goalkeeping' },
+                ]
+            },
+        ];
+
+        const overviewModalOverlay = document.getElementById('overview-modal-overlay');
+        const overviewCloseBtn     = document.getElementById('overview-close-btn');
+        const overviewTeamNameEl   = document.getElementById('overview-team-name');
+        const overviewStatsContent = document.getElementById('overview-stats-content');
+
+        function openOverviewModal() {
+            if (!allStats || !allStats.attacking) return;
+
+            overviewTeamNameEl.textContent = document.getElementById('selected-team-name').textContent.trim();
+
+            function buildSection(section) {
+                let h = `<div class="overview-section-header">${section.label}</div>`;
+                section.stats.forEach(({ abbrev, category }) => {
+                    const catData = allStats[category];
+                    if (!catData?.success) return;
+                    const stat = catData.stats.find(s => s.abbrev === abbrev);
+                    if (!stat) return;
+
+                    const inverted  = isInvertedStat(abbrev);
+                    const rankClass = getRankClass(stat.rank, inverted);
+
+                    h += `
+                        <div class="overview-stat-row ${rankClass}">
+                            <span class="overview-name">${stat.name}</span>
+                            <div class="overview-value-block">
+                                <span class="overview-value">${stat.club}</span>
+                                ${stat.rank !== '-' ? `<span class="overview-rank-pos">${stat.rank}</span>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                return h;
+            }
+
+            const html = `
+                <div class="overview-columns">
+                    <div class="overview-col">
+                        ${OVERVIEW_SECTIONS.slice(0, 2).map(buildSection).join('')}
+                    </div>
+                    <div class="overview-col">
+                        ${OVERVIEW_SECTIONS.slice(2).map(buildSection).join('')}
+                    </div>
+                </div>
+            `;
+
+            overviewStatsContent.innerHTML = html;
+            overviewModalOverlay.classList.add('open');
+            document.body.style.overflow = 'hidden';
+
+            requestAnimationFrame(() => {
+                overviewStatsContent.querySelectorAll('.overview-stat-row').forEach((el, i) => {
+                    setTimeout(() => el.classList.add('animate-in'), i * 25);
+                });
+            });
+        }
+
+        function closeOverviewModal() {
+            overviewModalOverlay.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        overviewCloseBtn.addEventListener('click', closeOverviewModal);
+        overviewModalOverlay.addEventListener('click', (e) => {
+            if (e.target === overviewModalOverlay) closeOverviewModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && overviewModalOverlay.classList.contains('open')) closeOverviewModal();
         });
 
         // Initial load
