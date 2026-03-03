@@ -2491,8 +2491,8 @@ input, select, textarea, button {
    ============================================ */
 
 .h2h-modal {
-    max-width: 760px;
-    max-height: 90vh;
+    max-width: 860px;
+    max-height: 96vh;
     display: flex;
     flex-direction: column;
 }
@@ -2502,13 +2502,13 @@ input, select, textarea, button {
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
     gap: 12px;
-    padding: 24px 56px 16px 28px;
+    padding: 18px 56px 12px 28px;
     border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
 }
 
 .h2h-team-name {
-    font-size: 1.05rem;
+    font-size: 1.15rem;
     font-weight: 800;
     color: var(--text-primary);
     line-height: 1.2;
@@ -2531,26 +2531,25 @@ input, select, textarea, button {
 
 .h2h-body {
     flex: 1;
-    overflow-y: auto;
-    padding: 20px 28px 24px;
-    -webkit-overflow-scrolling: touch;
+    overflow-y: hidden;
+    padding: 14px 28px 14px;
 }
 
 /* ---- Ground filter ---- */
 .h2h-ground-filter {
     display: flex;
     gap: 8px;
-    margin-bottom: 20px;
+    margin-bottom: 14px;
     flex-wrap: wrap;
 }
 
 .h2h-filter-btn {
-    padding: 6px 14px;
+    padding: 6px 16px;
     border-radius: 20px;
     border: 1px solid rgba(255,255,255,0.15);
     background: rgba(255,255,255,0.06);
     color: var(--text-muted);
-    font-size: 0.75rem;
+    font-size: 0.82rem;
     font-weight: 600;
     cursor: pointer;
     font-family: inherit;
@@ -2574,16 +2573,16 @@ input, select, textarea, button {
 
 .h2h-summary {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 14px;
 }
 
 .h2h-played {
-    font-size: 0.75rem;
+    font-size: 0.82rem;
     font-weight: 700;
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 .h2h-record {
@@ -2596,24 +2595,25 @@ input, select, textarea, button {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 18px 32px;
+    padding: 14px 32px;
     border-radius: 10px;
-    min-width: 130px;
+    min-width: 140px;
 }
 
 .h2h-stat-num {
-    font-size: 2.6rem;
+    font-size: 2.8rem;
     font-weight: 800;
     line-height: 1;
     color: #fff;
 }
 
 .h2h-stat-label {
-    font-size: 0.75rem;
+    font-size: 0.82rem;
     font-weight: 700;
     color: rgba(255,255,255,0.8);
-    letter-spacing: 0.12em;
-    margin-top: 5px;
+    letter-spacing: 0.08em;
+    margin-top: 6px;
+    text-align: center;
 }
 
 .h2h-win  { background: var(--rank-excellent); }
@@ -2630,8 +2630,8 @@ input, select, textarea, button {
     background: rgba(255,255,255,0.04);
     border: 1px solid var(--border-color);
     border-radius: 10px;
-    padding: 16px 20px;
-    margin-bottom: 22px;
+    padding: 12px 20px;
+    margin-bottom: 14px;
 }
 
 .h2h-split-col {
@@ -2640,27 +2640,27 @@ input, select, textarea, button {
 }
 
 .h2h-split-title {
-    font-size: 0.68rem;
+    font-size: 0.75rem;
     font-weight: 700;
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.09em;
-    margin-bottom: 8px;
+    margin-bottom: 7px;
 }
 
 .h2h-split-record {
     display: flex;
     justify-content: center;
-    gap: 14px;
+    gap: 16px;
 }
 
-.h2h-split-w { color: var(--rank-excellent); font-size: 1rem; font-weight: 800; }
-.h2h-split-d { color: var(--text-secondary); font-size: 1rem; font-weight: 800; }
-.h2h-split-l { color: var(--rank-poor);      font-size: 1rem; font-weight: 800; }
+.h2h-split-w { color: var(--rank-excellent); font-size: 1.1rem; font-weight: 800; }
+.h2h-split-d { color: var(--text-secondary); font-size: 1.1rem; font-weight: 800; }
+.h2h-split-l { color: var(--rank-poor);      font-size: 1.1rem; font-weight: 800; }
 
 .h2h-split-divider {
     width: 1px;
-    height: 44px;
+    height: 40px;
     background: var(--border-color);
     margin: 0 20px;
 }
@@ -2668,7 +2668,7 @@ input, select, textarea, button {
 /* ---- Recent meetings ---- */
 
 .h2h-recent-header {
-    font-size: 0.68rem;
+    font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
@@ -2681,15 +2681,15 @@ input, select, textarea, button {
 .h2h-recent-list {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 6px;
 }
 
 .h2h-match-row {
     display: grid;
-    grid-template-columns: 86px 1fr 58px;
+    grid-template-columns: 92px 1fr 64px;
     align-items: center;
     gap: 10px;
-    padding: 9px 12px;
+    padding: 10px 14px;
     border-radius: 7px;
     border: 1px solid transparent;
 }
@@ -2699,7 +2699,7 @@ input, select, textarea, button {
 .h2h-match-row.loss { background: rgba(255, 96, 96, 0.07);  border-color: rgba(255, 96, 96, 0.2); }
 
 .h2h-match-date {
-    font-size: 0.68rem;
+    font-size: 0.75rem;
     color: var(--text-muted);
     font-weight: 500;
     white-space: nowrap;
@@ -2714,7 +2714,7 @@ input, select, textarea, button {
 }
 
 .h2h-match-team {
-    font-size: 0.78rem;
+    font-size: 0.88rem;
     font-weight: 500;
     color: var(--text-secondary);
     overflow: hidden;
@@ -2738,19 +2738,19 @@ input, select, textarea, button {
 .h2h-match-score .h2h-match-team:last-child  { text-align: left; }
 
 .h2h-score-box {
-    font-size: 0.95rem;
+    font-size: 1.05rem;
     font-weight: 800;
     color: var(--text-primary);
     flex-shrink: 0;
-    min-width: 44px;
+    min-width: 48px;
     text-align: center;
     background: rgba(255,255,255,0.06);
-    padding: 2px 8px;
+    padding: 3px 10px;
     border-radius: 5px;
 }
 
 .h2h-match-season {
-    font-size: 0.62rem;
+    font-size: 0.7rem;
     color: var(--text-muted);
     text-align: right;
     font-weight: 500;
