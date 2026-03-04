@@ -1622,6 +1622,12 @@
         const lineupsTeam2Name    = document.getElementById('lineups-team2-name');
         const lineupsBody         = document.getElementById('lineups-body');
 
+        // Persist chosen kit colours between modal opens
+        let lineupT1Color    = '#7B2035';
+        let lineupT2Color    = '#1BB1E7';
+        let lineupT1NumColor = '#FFFFFF';
+        let lineupT2NumColor = '#FFFFFF';
+
         document.getElementById('lineups-btn').addEventListener('click', openLineupsModal);
 
         async function openLineupsModal() {
@@ -1675,11 +1681,13 @@
                     const leftPct = isLeft ? p.x * 50 : 50 + (1 - p.x) * 50;
                     const topPct  = isLeft ? p.y * 100 : (1 - p.y) * 100;
                     // Show surname only (last word of name)
-                    const surname = p.name.split(' ').slice(-1)[0];
+                    const surname   = p.name.split(' ').slice(-1)[0];
+                    const dotColor  = isLeft ? lineupT1Color    : lineupT2Color;
+                    const numColor  = isLeft ? lineupT1NumColor : lineupT2NumColor;
                     return `
                         <div class="pitch-player ${isLeft ? 'chip-t1' : 'chip-t2'}"
                              style="left:${leftPct.toFixed(1)}%;top:${topPct.toFixed(1)}%">
-                            <div class="player-dot"><span class="player-shirt">${p.shirt}</span></div>
+                            <div class="player-dot" style="background:${dotColor}"><span class="player-shirt" style="color:${numColor}">${p.shirt}</span></div>
                             <span class="player-name">${surname}</span>
                         </div>`;
                 }).join('');
@@ -1734,11 +1742,62 @@
                     </div>
                 </div>
                 <div class="lineups-legend">
-                    <span class="legend-item"><span class="legend-dot chip-t1"></span>${team1.name || ''}</span>
+                    <span class="legend-item"><span class="legend-dot" id="legend-dot-t1" style="background:${lineupT1Color}"></span>${team1.name || ''}</span>
                     <span class="lineups-note">Source: FotMob</span>
-                    <span class="legend-item legend-right"><span class="legend-dot chip-t2"></span>${team2.name || ''}</span>
+                    <span class="legend-item legend-right"><span class="legend-dot" id="legend-dot-t2" style="background:${lineupT2Color}"></span>${team2.name || ''}</span>
+                </div>
+                <div class="lineups-color-picker">
+                    <div class="color-picker-group">
+                        <label class="color-picker-label">${team1.name || 'Home'}</label>
+                        <div class="color-picker-swatches">
+                            <div class="color-swatch-item">
+                                <span class="swatch-label">Shirt</span>
+                                <input type="color" class="color-input" id="t1-color-input" value="${lineupT1Color}">
+                            </div>
+                            <div class="color-swatch-item">
+                                <span class="swatch-label">No.</span>
+                                <input type="color" class="color-input" id="t1-num-color-input" value="${lineupT1NumColor}">
+                            </div>
+                        </div>
+                    </div>
+                    <span class="color-picker-title">Kit Colours</span>
+                    <div class="color-picker-group color-picker-right">
+                        <div class="color-picker-swatches">
+                            <div class="color-swatch-item">
+                                <span class="swatch-label">No.</span>
+                                <input type="color" class="color-input" id="t2-num-color-input" value="${lineupT2NumColor}">
+                            </div>
+                            <div class="color-swatch-item">
+                                <span class="swatch-label">Shirt</span>
+                                <input type="color" class="color-input" id="t2-color-input" value="${lineupT2Color}">
+                            </div>
+                        </div>
+                        <label class="color-picker-label">${team2.name || 'Away'}</label>
+                    </div>
                 </div>
             `;
+
+            // Live kit colour updates
+            document.getElementById('t1-color-input').addEventListener('input', (e) => {
+                lineupT1Color = e.target.value;
+                document.querySelectorAll('.chip-t1 .player-dot').forEach(d => d.style.background = lineupT1Color);
+                const dot = document.getElementById('legend-dot-t1');
+                if (dot) dot.style.background = lineupT1Color;
+            });
+            document.getElementById('t2-color-input').addEventListener('input', (e) => {
+                lineupT2Color = e.target.value;
+                document.querySelectorAll('.chip-t2 .player-dot').forEach(d => d.style.background = lineupT2Color);
+                const dot = document.getElementById('legend-dot-t2');
+                if (dot) dot.style.background = lineupT2Color;
+            });
+            document.getElementById('t1-num-color-input').addEventListener('input', (e) => {
+                lineupT1NumColor = e.target.value;
+                document.querySelectorAll('.chip-t1 .player-shirt').forEach(s => s.style.color = lineupT1NumColor);
+            });
+            document.getElementById('t2-num-color-input').addEventListener('input', (e) => {
+                lineupT2NumColor = e.target.value;
+                document.querySelectorAll('.chip-t2 .player-shirt').forEach(s => s.style.color = lineupT2NumColor);
+            });
         }
 
         function closeLineupsModal() {
