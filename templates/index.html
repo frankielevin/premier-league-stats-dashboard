@@ -242,6 +242,14 @@
                     </svg>
                     Team News
                 </button>
+                <button class="lineups-launch-btn" id="lineups-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <line x1="12" y1="3" x2="12" y2="21"/>
+                        <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    Predicted Lineups
+                </button>
             </div>
 
             <!-- Hidden — kept for JS compatibility -->
@@ -360,6 +368,27 @@
             </div>
 
             <div class="news-body" id="news-body">
+                <!-- Populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Predicted Lineups Modal -->
+    <div class="stat-modal-overlay" id="lineups-modal-overlay">
+        <div class="stat-modal lineups-modal" id="lineups-modal">
+            <button class="modal-close-btn" id="lineups-close-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+            </button>
+
+            <div class="lineups-header">
+                <div class="lineups-team-name" id="lineups-team1-name"></div>
+                <div class="lineups-pill">PREDICTED LINEUPS</div>
+                <div class="lineups-team-name lineups-right" id="lineups-team2-name"></div>
+            </div>
+
+            <div class="lineups-body" id="lineups-body">
                 <!-- Populated by JS -->
             </div>
         </div>
@@ -1581,6 +1610,120 @@
         });
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && overviewModalOverlay.classList.contains('open')) closeOverviewModal();
+        });
+
+        // ============================================
+        //  Predicted Lineups Modal
+        // ============================================
+
+        const lineupsModalOverlay = document.getElementById('lineups-modal-overlay');
+        const lineupsCloseBtn     = document.getElementById('lineups-close-btn');
+        const lineupsTeam1Name    = document.getElementById('lineups-team1-name');
+        const lineupsTeam2Name    = document.getElementById('lineups-team2-name');
+        const lineupsBody         = document.getElementById('lineups-body');
+
+        document.getElementById('lineups-btn').addEventListener('click', openLineupsModal);
+
+        async function openLineupsModal() {
+            const team1 = compareDropdown1.dataset.value;
+            const team2 = compareDropdown2.dataset.value;
+            if (team1 === team2) return;
+
+            const t1Name = compareDropdown1.querySelector('.compare-selected-team').textContent.trim();
+            const t2Name = compareDropdown2.querySelector('.compare-selected-team').textContent.trim();
+
+            lineupsTeam1Name.textContent = t1Name;
+            lineupsTeam2Name.textContent = t2Name;
+
+            lineupsBody.innerHTML = `
+                <div class="lineups-loading">
+                    <div class="loading-spinner"></div>
+                    <p>Building predicted lineups…</p>
+                </div>
+            `;
+
+            lineupsModalOverlay.classList.add('open');
+            document.body.style.overflow = 'hidden';
+
+            try {
+                const resp = await fetch(`/api/predicted-lineups?team1=${team1}&team2=${team2}`);
+                const data = await resp.json();
+
+                if (data.error) {
+                    lineupsBody.innerHTML = `<div class="lineups-error">${data.error}</div>`;
+                    return;
+                }
+
+                renderLineupsModal(data);
+            } catch (err) {
+                lineupsBody.innerHTML = `<div class="lineups-error">Failed to load predicted lineups. Please try again.</div>`;
+            }
+        }
+
+        function renderLineupsModal(data) {
+            const { team1, team2 } = data;
+
+            function playerCol(players, chipClass) {
+                return `<div class="formation-col">
+                    ${players.map(p => `
+                        <div class="player-chip ${chipClass}">
+                            <div class="player-dot"></div>
+                            <span class="player-name">${p.name}</span>
+                        </div>
+                    `).join('')}
+                </div>`;
+            }
+
+            lineupsBody.innerHTML = `
+                <div class="pitch-container">
+                    <div class="pitch-markings">
+                        <svg class="pitch-svg" viewBox="0 0 1000 340" preserveAspectRatio="none">
+                            <rect x="2" y="2" width="996" height="336" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="3"/>
+                            <line x1="500" y1="0" x2="500" y2="340" stroke="rgba(255,255,255,0.38)" stroke-width="2"/>
+                            <circle cx="500" cy="170" r="65" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2"/>
+                            <circle cx="500" cy="170" r="4" fill="rgba(255,255,255,0.45)"/>
+                            <rect x="2" y="88" width="145" height="164" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="2"/>
+                            <rect x="2" y="132" width="52" height="76" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>
+                            <circle cx="120" cy="170" r="3" fill="rgba(255,255,255,0.35)"/>
+                            <rect x="853" y="88" width="145" height="164" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="2"/>
+                            <rect x="946" y="132" width="52" height="76" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>
+                            <circle cx="880" cy="170" r="3" fill="rgba(255,255,255,0.35)"/>
+                        </svg>
+                    </div>
+                    <div class="pitch-teams">
+                        <div class="pitch-half pitch-left">
+                            ${playerCol(team1.lineup.gk,  'chip-t1')}
+                            ${playerCol(team1.lineup.def, 'chip-t1')}
+                            ${playerCol(team1.lineup.mid, 'chip-t1')}
+                            ${playerCol(team1.lineup.fwd, 'chip-t1')}
+                        </div>
+                        <div class="pitch-half pitch-right">
+                            ${playerCol(team2.lineup.fwd, 'chip-t2')}
+                            ${playerCol(team2.lineup.mid, 'chip-t2')}
+                            ${playerCol(team2.lineup.def, 'chip-t2')}
+                            ${playerCol(team2.lineup.gk,  'chip-t2')}
+                        </div>
+                    </div>
+                </div>
+                <div class="lineups-legend">
+                    <span class="legend-item"><span class="legend-dot chip-t1"></span>${team1.name}</span>
+                    <span class="lineups-note">Predicted XIs · FPL season stats &amp; injury data · 4-3-3</span>
+                    <span class="legend-item legend-right"><span class="legend-dot chip-t2"></span>${team2.name}</span>
+                </div>
+            `;
+        }
+
+        function closeLineupsModal() {
+            lineupsModalOverlay.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        lineupsCloseBtn.addEventListener('click', closeLineupsModal);
+        lineupsModalOverlay.addEventListener('click', (e) => {
+            if (e.target === lineupsModalOverlay) closeLineupsModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && lineupsModalOverlay.classList.contains('open')) closeLineupsModal();
         });
 
         // Initial load

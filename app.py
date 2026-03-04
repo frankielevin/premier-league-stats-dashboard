@@ -85,6 +85,30 @@ PL_TEAM_IDS = {
     "wolves":            38,
 }
 
+# FPL short names for dynamic team ID lookup from bootstrap-static
+FPL_TEAM_NAMES = {
+    "arsenal":           "ARS",
+    "aston-villa":       "AVL",
+    "bournemouth":       "BOU",
+    "brentford":         "BRE",
+    "brighton":          "BHA",
+    "burnley":           "BUR",
+    "chelsea":           "CHE",
+    "crystal-palace":    "CRY",
+    "everton":           "EVE",
+    "fulham":            "FUL",
+    "leeds":             "LEE",
+    "liverpool":         "LIV",
+    "man-city":          "MCI",
+    "man-united":        "MUN",
+    "newcastle":         "NEW",
+    "nottingham-forest": "NFO",
+    "sunderland":        "SUN",
+    "tottenham":         "TOT",
+    "west-ham":          "WHU",
+    "wolves":            "WOL",
+}
+
 PL_API_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Origin": "https://www.premierleague.com",
@@ -96,6 +120,9 @@ _h2h_cache = {}
 
 # In-memory standings cache — TTL 6 hours
 _standings_cache = {}
+
+# In-memory FPL cache — TTL 1 hour
+_fpl_cache = {}
 
 
 def fetch_standings():
@@ -145,6 +172,83 @@ def fetch_standings():
 
     _standings_cache["data"] = {"data": result, "ts": time.time()}
     return result
+
+def fetch_fpl_bootstrap():
+    """Fetch FPL bootstrap-static data. Cached for 1 hour."""
+    if _fpl_cache:
+        cached = _fpl_cache.get("data")
+        if cached and time.time() - cached["ts"] < 3600:
+            return cached["data"]
+
+    r = requests.get(
+        "https://fantasy.premierleague.com/api/bootstrap-static/",
+        headers={"User-Agent": "Mozilla/5.0"},
+        timeout=15,
+    )
+    r.raise_for_status()
+    data = r.json()
+    _fpl_cache["data"] = {"data": data, "ts": time.time()}
+    return data
+
+
+def predict_lineup(team_key, all_players, fpl_teams, injured_out_names=None):
+    """
+    Predict starting XI for a team using FPL data.
+    Formation: 4-3-3 (GK=1, DEF=4, MID=3, FWD=3).
+    Returns dict with keys 'gk', 'def', 'mid', 'fwd'.
+    """
+    # Resolve FPL team ID by matching short_name
+    short = FPL_TEAM_NAMES.get(team_key, "").upper()
+    fpl_team_id = next((t["id"] for t in fpl_teams if t.get("short_name", "").upper() == short), None)
+
+    if not fpl_team_id:
+        return {"gk": [], "def": [], "mid": [], "fwd": []}
+
+    # Normalise injury names for matching
+    injured_lower = {n.lower().strip() for n in (injured_out_names or [])}
+
+    team_players = [p for p in all_players if p["team"] == fpl_team_id]
+
+    def is_available(p):
+        if p.get("status") in ("i", "u", "s", "n"):
+            return False
+        cop = p.get("chance_of_playing_next_round")
+        if cop is not None and cop < 50:
+            return False
+        # Cross-reference injury names: match against web_name or full name
+        web = p["web_name"].lower()
+        full = (p.get("first_name", "") + " " + p.get("second_name", "")).lower().strip()
+        for inj in injured_lower:
+            inj_parts = [part for part in inj.split() if len(part) > 3]
+            if any(part in web or part in full for part in inj_parts):
+                return False
+        return True
+
+    def sort_key(p):
+        return (
+            float(p.get("starts_per_90") or 0),
+            float(p.get("points_per_game") or 0),
+            float(p.get("ep_next") or 0),
+        )
+
+    pos_map = {1: ("gk", 1), 2: ("def", 4), 3: ("mid", 3), 4: ("fwd", 3)}
+    result = {}
+
+    for pos_id, (key, count) in pos_map.items():
+        pos_players = [p for p in team_players if p["element_type"] == pos_id]
+        available = sorted([p for p in pos_players if is_available(p)], key=sort_key, reverse=True)
+
+        # Fall back to all position players (sorted by form) if insufficient available
+        if len(available) < count:
+            available = sorted(pos_players, key=sort_key, reverse=True)
+
+        result[key] = [
+            {"name": p["web_name"]}
+            for p in available[:count]
+        ]
+
+    return result
+
 
 # knocksandbans.com slugs for team news scraping
 KNOCKSANDBANS_SLUGS = {
@@ -576,6 +680,40 @@ def get_team_news():
     return jsonify({
         'team1': fetch_team_news(team1_key),
         'team2': fetch_team_news(team2_key),
+    })
+
+
+@app.route('/api/predicted-lineups')
+def get_predicted_lineups():
+    """API endpoint to get predicted lineups for both teams using FPL data."""
+    team1_key = request.args.get('team1', 'west-ham')
+    team2_key = request.args.get('team2', 'arsenal')
+
+    if team1_key not in TEAMS:
+        team1_key = 'west-ham'
+    if team2_key not in TEAMS:
+        team2_key = 'arsenal'
+
+    try:
+        fpl_data = fetch_fpl_bootstrap()
+    except Exception as e:
+        return jsonify({'error': f'Could not fetch FPL data: {str(e)}'}), 500
+
+    all_players = fpl_data.get('elements', [])
+    fpl_teams   = fpl_data.get('teams', [])
+
+    # Get confirmed-out / suspended players from injury data as extra filter
+    news1 = fetch_team_news(team1_key)
+    news2 = fetch_team_news(team2_key)
+    out1 = {p['name'] for p in news1.get('players', []) if p.get('type') in ('out', 'suspended')}
+    out2 = {p['name'] for p in news2.get('players', []) if p.get('type') in ('out', 'suspended')}
+
+    lineup1 = predict_lineup(team1_key, all_players, fpl_teams, out1)
+    lineup2 = predict_lineup(team2_key, all_players, fpl_teams, out2)
+
+    return jsonify({
+        'team1': {'name': TEAMS[team1_key]['name'], 'lineup': lineup1},
+        'team2': {'name': TEAMS[team2_key]['name'], 'lineup': lineup2},
     })
 
 
