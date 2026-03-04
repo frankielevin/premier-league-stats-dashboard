@@ -3,6 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 import time
 import re
+import json
 from datetime import datetime
 
 app = Flask(__name__)
@@ -85,28 +86,34 @@ PL_TEAM_IDS = {
     "wolves":            38,
 }
 
-# FPL short names for dynamic team ID lookup from bootstrap-static
-FPL_TEAM_NAMES = {
-    "arsenal":           "ARS",
-    "aston-villa":       "AVL",
-    "bournemouth":       "BOU",
-    "brentford":         "BRE",
-    "brighton":          "BHA",
-    "burnley":           "BUR",
-    "chelsea":           "CHE",
-    "crystal-palace":    "CRY",
-    "everton":           "EVE",
-    "fulham":            "FUL",
-    "leeds":             "LEE",
-    "liverpool":         "LIV",
-    "man-city":          "MCI",
-    "man-united":        "MUN",
-    "newcastle":         "NEW",
-    "nottingham-forest": "NFO",
-    "sunderland":        "SUN",
-    "tottenham":         "TOT",
-    "west-ham":          "WHU",
-    "wolves":            "WOL",
+# FotMob team IDs (stable across seasons for existing clubs)
+FOTMOB_TEAM_IDS = {
+    "arsenal":           9825,
+    "aston-villa":       10252,
+    "bournemouth":       8678,
+    "brentford":         9937,
+    "brighton":          10204,
+    "burnley":           8191,
+    "chelsea":           8455,
+    "crystal-palace":    9826,
+    "everton":           8668,
+    "fulham":            9879,
+    "leeds":             8463,
+    "liverpool":         8650,
+    "man-city":          8456,
+    "man-united":        10260,
+    "newcastle":         10261,
+    "nottingham-forest": 10203,
+    "sunderland":        8472,
+    "tottenham":         8586,
+    "west-ham":          8654,
+    "wolves":            8602,
+}
+
+FOTMOB_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-GB,en;q=0.9",
 }
 
 PL_API_HEADERS = {
@@ -121,8 +128,8 @@ _h2h_cache = {}
 # In-memory standings cache — TTL 6 hours
 _standings_cache = {}
 
-# In-memory FPL cache — TTL 1 hour
-_fpl_cache = {}
+# In-memory FotMob lineup cache — TTL 2 hours per team
+_fotmob_cache = {}
 
 
 def fetch_standings():
@@ -173,80 +180,104 @@ def fetch_standings():
     _standings_cache["data"] = {"data": result, "ts": time.time()}
     return result
 
-def fetch_fpl_bootstrap():
-    """Fetch FPL bootstrap-static data. Cached for 1 hour."""
-    if _fpl_cache:
-        cached = _fpl_cache.get("data")
-        if cached and time.time() - cached["ts"] < 3600:
+def fetch_fotmob_lineup(team_key):
+    """
+    Fetch the predicted/confirmed lineup for a team's next match from FotMob.
+    Scrapes the FotMob team overview page to find nextMatch, then fetches
+    the match page __NEXT_DATA__ for lineup coordinates.
+    Cached per team for 2 hours.
+    """
+    if team_key in _fotmob_cache:
+        cached = _fotmob_cache[team_key]
+        if time.time() - cached["ts"] < 7200:
             return cached["data"]
 
-    r = requests.get(
-        "https://fantasy.premierleague.com/api/bootstrap-static/",
-        headers={"User-Agent": "Mozilla/5.0"},
-        timeout=15,
-    )
-    r.raise_for_status()
-    data = r.json()
-    _fpl_cache["data"] = {"data": data, "ts": time.time()}
-    return data
+    fotmob_id = FOTMOB_TEAM_IDS.get(team_key)
+    if not fotmob_id:
+        return {"error": "Team not available on FotMob"}
 
+    try:
+        # ── Step 1: get the team's next match URL ──────────────────────────
+        team_url = f"https://www.fotmob.com/teams/{fotmob_id}/overview"
+        r = requests.get(team_url, headers=FOTMOB_HEADERS, timeout=15)
+        r.raise_for_status()
 
-def predict_lineup(team_key, all_players, fpl_teams, injured_out_names=None):
-    """
-    Predict starting XI for a team using FPL data.
-    Formation: 4-3-3 (GK=1, DEF=4, MID=3, FWD=3).
-    Returns dict with keys 'gk', 'def', 'mid', 'fwd'.
-    """
-    # Resolve FPL team ID by matching short_name
-    short = FPL_TEAM_NAMES.get(team_key, "").upper()
-    fpl_team_id = next((t["id"] for t in fpl_teams if t.get("short_name", "").upper() == short), None)
+        m = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', r.text, re.DOTALL)
+        if not m:
+            return {"error": "Could not parse FotMob team page"}
 
-    if not fpl_team_id:
-        return {"gk": [], "def": [], "mid": [], "fwd": []}
+        team_page = json.loads(m.group(1))
+        fallback   = team_page["props"]["pageProps"].get("fallback", {})
+        team_info  = fallback.get(f"team-{fotmob_id}", {})
+        next_match = team_info.get("fixtures", {}).get("allFixtures", {}).get("nextMatch")
 
-    # Normalise injury names for matching
-    injured_lower = {n.lower().strip() for n in (injured_out_names or [])}
+        if not next_match or not next_match.get("pageUrl"):
+            return {"error": "No upcoming match found for this team"}
 
-    team_players = [p for p in all_players if p["team"] == fpl_team_id]
+        page_url = next_match["pageUrl"]   # e.g. /matches/…/2u9b5i#4813659
+        match_id = next_match["id"]
+        opponent_name = next_match.get("opponent", {}).get("name", "")
+        home_side = next_match.get("home", {})
+        away_side = next_match.get("away", {})
+        kickoff   = next_match.get("status", {}).get("utcTime", "")
+        is_home   = home_side.get("id") == fotmob_id
 
-    def is_available(p):
-        if p.get("status") in ("i", "u", "s", "n"):
-            return False
-        cop = p.get("chance_of_playing_next_round")
-        if cop is not None and cop < 50:
-            return False
-        # Cross-reference injury names: match against web_name or full name
-        web = p["web_name"].lower()
-        full = (p.get("first_name", "") + " " + p.get("second_name", "")).lower().strip()
-        for inj in injured_lower:
-            inj_parts = [part for part in inj.split() if len(part) > 3]
-            if any(part in web or part in full for part in inj_parts):
-                return False
-        return True
+        # ── Step 2: fetch the match page for lineup data ───────────────────
+        match_url = f"https://www.fotmob.com/en-GB{page_url}"
+        r2 = requests.get(match_url, headers=FOTMOB_HEADERS, timeout=15)
+        r2.raise_for_status()
 
-    def sort_key(p):
-        return (
-            float(p.get("starts_per_90") or 0),
-            float(p.get("points_per_game") or 0),
-            float(p.get("ep_next") or 0),
-        )
+        m2 = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', r2.text, re.DOTALL)
+        if not m2:
+            return {"error": "Could not parse FotMob match page"}
 
-    pos_map = {1: ("gk", 1), 2: ("def", 4), 3: ("mid", 3), 4: ("fwd", 3)}
-    result = {}
+        match_page   = json.loads(m2.group(1))
+        lineup_block = match_page["props"]["pageProps"]["content"].get("lineup", {})
+        lineup_type  = lineup_block.get("lineupType", "")   # 'predicted' or 'lineup' (confirmed)
 
-    for pos_id, (key, count) in pos_map.items():
-        pos_players = [p for p in team_players if p["element_type"] == pos_id]
-        available = sorted([p for p in pos_players if is_available(p)], key=sort_key, reverse=True)
+        # Find the correct side for this team
+        home_data = lineup_block.get("homeTeam", {})
+        away_data = lineup_block.get("awayTeam", {})
+        team_side = home_data if home_data.get("id") == fotmob_id else away_data
 
-        # Fall back to all position players (sorted by form) if insufficient available
-        if len(available) < count:
-            available = sorted(pos_players, key=sort_key, reverse=True)
+        starters = []
+        for p in team_side.get("starters", []):
+            hl = p.get("horizontalLayout", {})
+            starters.append({
+                "name":  p.get("name", ""),
+                "shirt": str(p.get("shirtNumber", "")),
+                "x":     float(hl.get("x", 0.5)),
+                "y":     float(hl.get("y", 0.5)),
+            })
 
-        result[key] = [
-            {"name": p["web_name"]}
-            for p in available[:count]
-        ]
+        unavailable = []
+        for p in team_side.get("unavailable", []):
+            u = p.get("unavailability", {})
+            unavailable.append({
+                "name":   p.get("name", ""),
+                "type":   u.get("type", "injury"),
+                "return": u.get("expectedReturn", "Unknown"),
+            })
 
+        result = {
+            "name":        team_side.get("name", TEAMS[team_key]["name"]),
+            "formation":   team_side.get("formation", ""),
+            "lineupType":  lineup_type,
+            "starters":    starters,
+            "unavailable": unavailable,
+            "nextMatch": {
+                "matchId":   match_id,
+                "pageUrl":   page_url,
+                "opponent":  opponent_name,
+                "kickoff":   kickoff,
+                "isHome":    is_home,
+            },
+        }
+
+    except Exception as e:
+        return {"error": str(e)}
+
+    _fotmob_cache[team_key] = {"data": result, "ts": time.time()}
     return result
 
 
@@ -685,7 +716,7 @@ def get_team_news():
 
 @app.route('/api/predicted-lineups')
 def get_predicted_lineups():
-    """API endpoint to get predicted lineups for both teams using FPL data."""
+    """API endpoint to get FotMob predicted/confirmed lineups for both teams."""
     team1_key = request.args.get('team1', 'west-ham')
     team2_key = request.args.get('team2', 'arsenal')
 
@@ -694,26 +725,17 @@ def get_predicted_lineups():
     if team2_key not in TEAMS:
         team2_key = 'arsenal'
 
-    try:
-        fpl_data = fetch_fpl_bootstrap()
-    except Exception as e:
-        return jsonify({'error': f'Could not fetch FPL data: {str(e)}'}), 500
+    lineup1 = fetch_fotmob_lineup(team1_key)
+    lineup2 = fetch_fotmob_lineup(team2_key)
 
-    all_players = fpl_data.get('elements', [])
-    fpl_teams   = fpl_data.get('teams', [])
-
-    # Get confirmed-out / suspended players from injury data as extra filter
-    news1 = fetch_team_news(team1_key)
-    news2 = fetch_team_news(team2_key)
-    out1 = {p['name'] for p in news1.get('players', []) if p.get('type') in ('out', 'suspended')}
-    out2 = {p['name'] for p in news2.get('players', []) if p.get('type') in ('out', 'suspended')}
-
-    lineup1 = predict_lineup(team1_key, all_players, fpl_teams, out1)
-    lineup2 = predict_lineup(team2_key, all_players, fpl_teams, out2)
+    # Flag if both teams are playing each other (same matchId)
+    m1 = lineup1.get("nextMatch", {}).get("matchId")
+    m2 = lineup2.get("nextMatch", {}).get("matchId")
 
     return jsonify({
-        'team1': {'name': TEAMS[team1_key]['name'], 'lineup': lineup1},
-        'team2': {'name': TEAMS[team2_key]['name'], 'lineup': lineup2},
+        'team1':      lineup1,
+        'team2':      lineup2,
+        'sameMatch':  bool(m1 and m2 and m1 == m2),
     })
 
 

@@ -1661,54 +1661,79 @@
         }
 
         function renderLineupsModal(data) {
-            const { team1, team2 } = data;
+            const { team1, team2, sameMatch } = data;
 
-            function playerCol(players, chipClass) {
-                return `<div class="formation-col">
-                    ${players.map(p => `
-                        <div class="player-chip ${chipClass}">
-                            <div class="player-dot"></div>
+            // If a team has an error, show a message in place of their players
+            function renderPlayers(teamData, isLeft) {
+                if (teamData.error || !teamData.starters || teamData.starters.length === 0) {
+                    return `<div class="pitch-no-lineup">${teamData.error || 'Lineup not yet available'}</div>`;
+                }
+                return teamData.starters.map(p => {
+                    // x = depth from own goal (0=own goal, ~0.9=opp half)
+                    // y = lateral position across pitch (0=top, 1=bottom)
+                    const leftPct = isLeft ? p.x * 50 : 50 + (1 - p.x) * 50;
+                    const topPct  = p.y * 100;
+                    return `
+                        <div class="pitch-player ${isLeft ? 'chip-t1' : 'chip-t2'}"
+                             style="left:${leftPct.toFixed(1)}%;top:${topPct.toFixed(1)}%">
+                            <div class="player-dot"><span class="player-shirt">${p.shirt}</span></div>
                             <span class="player-name">${p.name}</span>
-                        </div>
-                    `).join('')}
-                </div>`;
+                        </div>`;
+                }).join('');
             }
 
+            // Match info banner when both teams face each other
+            let matchBanner = '';
+            if (sameMatch && team1.nextMatch && team1.nextMatch.kickoff) {
+                const ko = new Date(team1.nextMatch.kickoff);
+                const dateStr = ko.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+                const timeStr = ko.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                const homeTeam  = team1.nextMatch.isHome ? team1.name : team2.name;
+                const awayTeam  = team1.nextMatch.isHome ? team2.name : team1.name;
+                matchBanner = `
+                    <div class="lineup-match-banner">
+                        <span class="match-banner-teams">${homeTeam} vs ${awayTeam}</span>
+                        <span class="match-banner-time">${dateStr} · ${timeStr}</span>
+                    </div>`;
+            }
+
+            const t1Form = team1.formation || '';
+            const t2Form = team2.formation || '';
+            const badge  = (team1.lineupType === 'lineup' || team2.lineupType === 'lineup')
+                           ? '<span class="lineup-confirmed-badge">CONFIRMED</span>'
+                           : '<span class="lineup-predicted-badge">PREDICTED</span>';
+
             lineupsBody.innerHTML = `
+                ${matchBanner}
+                <div class="lineups-meta">
+                    <span class="formation-tag">${t1Form}</span>
+                    ${badge}
+                    <span class="formation-tag">${t2Form}</span>
+                </div>
                 <div class="pitch-container">
                     <div class="pitch-markings">
-                        <svg class="pitch-svg" viewBox="0 0 1000 340" preserveAspectRatio="none">
-                            <rect x="2" y="2" width="996" height="336" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="3"/>
-                            <line x1="500" y1="0" x2="500" y2="340" stroke="rgba(255,255,255,0.38)" stroke-width="2"/>
-                            <circle cx="500" cy="170" r="65" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2"/>
-                            <circle cx="500" cy="170" r="4" fill="rgba(255,255,255,0.45)"/>
-                            <rect x="2" y="88" width="145" height="164" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="2"/>
-                            <rect x="2" y="132" width="52" height="76" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>
-                            <circle cx="120" cy="170" r="3" fill="rgba(255,255,255,0.35)"/>
-                            <rect x="853" y="88" width="145" height="164" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="2"/>
-                            <rect x="946" y="132" width="52" height="76" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>
-                            <circle cx="880" cy="170" r="3" fill="rgba(255,255,255,0.35)"/>
+                        <svg class="pitch-svg" viewBox="0 0 1000 600" preserveAspectRatio="none">
+                            <rect x="2" y="2" width="996" height="596" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="3"/>
+                            <line x1="500" y1="0" x2="500" y2="600" stroke="rgba(255,255,255,0.38)" stroke-width="2"/>
+                            <circle cx="500" cy="300" r="90" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2"/>
+                            <circle cx="500" cy="300" r="5" fill="rgba(255,255,255,0.45)"/>
+                            <rect x="2" y="148" width="180" height="304" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="2"/>
+                            <rect x="2" y="228" width="64" height="144" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>
+                            <circle cx="152" cy="300" r="4" fill="rgba(255,255,255,0.35)"/>
+                            <rect x="818" y="148" width="180" height="304" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="2"/>
+                            <rect x="934" y="228" width="64" height="144" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>
+                            <circle cx="848" cy="300" r="4" fill="rgba(255,255,255,0.35)"/>
                         </svg>
                     </div>
-                    <div class="pitch-teams">
-                        <div class="pitch-half pitch-left">
-                            ${playerCol(team1.lineup.gk,  'chip-t1')}
-                            ${playerCol(team1.lineup.def, 'chip-t1')}
-                            ${playerCol(team1.lineup.mid, 'chip-t1')}
-                            ${playerCol(team1.lineup.fwd, 'chip-t1')}
-                        </div>
-                        <div class="pitch-half pitch-right">
-                            ${playerCol(team2.lineup.fwd, 'chip-t2')}
-                            ${playerCol(team2.lineup.mid, 'chip-t2')}
-                            ${playerCol(team2.lineup.def, 'chip-t2')}
-                            ${playerCol(team2.lineup.gk,  'chip-t2')}
-                        </div>
+                    <div class="pitch-players">
+                        ${renderPlayers(team1, true)}
+                        ${renderPlayers(team2, false)}
                     </div>
                 </div>
                 <div class="lineups-legend">
-                    <span class="legend-item"><span class="legend-dot chip-t1"></span>${team1.name}</span>
-                    <span class="lineups-note">Predicted XIs · FPL season stats &amp; injury data · 4-3-3</span>
-                    <span class="legend-item legend-right"><span class="legend-dot chip-t2"></span>${team2.name}</span>
+                    <span class="legend-item"><span class="legend-dot chip-t1"></span>${team1.name || ''}</span>
+                    <span class="lineups-note">Source: FotMob</span>
+                    <span class="legend-item legend-right"><span class="legend-dot chip-t2"></span>${team2.name || ''}</span>
                 </div>
             `;
         }
