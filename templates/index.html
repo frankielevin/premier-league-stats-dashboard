@@ -1670,14 +1670,17 @@
                 }
                 return teamData.starters.map(p => {
                     // x = depth from own goal (0=own goal, ~0.9=opp half)
-                    // y = lateral position across pitch (0=top, 1=bottom)
+                    // y = lateral position from team's own perspective (0=top, 1=bottom)
+                    // Team 2 attacks in the opposite direction, so y must be flipped
                     const leftPct = isLeft ? p.x * 50 : 50 + (1 - p.x) * 50;
-                    const topPct  = p.y * 100;
+                    const topPct  = isLeft ? p.y * 100 : (1 - p.y) * 100;
+                    // Show surname only (last word of name)
+                    const surname = p.name.split(' ').slice(-1)[0];
                     return `
                         <div class="pitch-player ${isLeft ? 'chip-t1' : 'chip-t2'}"
                              style="left:${leftPct.toFixed(1)}%;top:${topPct.toFixed(1)}%">
                             <div class="player-dot"><span class="player-shirt">${p.shirt}</span></div>
-                            <span class="player-name">${p.name}</span>
+                            <span class="player-name">${surname}</span>
                         </div>`;
                 }).join('');
             }
