@@ -1,5 +1,7 @@
-from flask import Flask, jsonify
+from flask import Flask, Response, jsonify, request
 import time
+
+import requests
 
 import app as core
 
@@ -68,8 +70,31 @@ def build_standings():
     return result
 
 
+def _badge_response(team_key):
+    standings_data = build_standings()
+    team = standings_data.get(team_key)
+    badge_url = str((team or {}).get("badge", "") or "").strip()
+    if not badge_url or not badge_url.startswith("https://apiv3.apifootball.com/"):
+        return jsonify({"error": "Badge unavailable."}), 404
+
+    try:
+        upstream = requests.get(badge_url, timeout=15)
+        upstream.raise_for_status()
+    except requests.RequestException:
+        return jsonify({"error": "Badge unavailable."}), 502
+
+    content_type = upstream.headers.get("Content-Type", "image/jpeg")
+    response = Response(upstream.content, status=200, content_type=content_type)
+    response.headers["Cache-Control"] = "public, max-age=86400, s-maxage=86400"
+    return response
+
+
 @app.route("/api/standings")
 def standings():
+    team_key = str(request.args.get("badge", "") or "").strip()
+    if team_key:
+        return _badge_response(team_key)
+
     try:
         return jsonify(build_standings())
     except Exception as exc:
