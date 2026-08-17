@@ -130,6 +130,7 @@ def build_form_fixtures():
             "from": core.SEASON_START.isoformat(),
             "to": SEASON_END,
             "league_id": core.LEAGUE_ID,
+            "timezone": "Europe/London",
         },
     )
     events = [event for event in events if isinstance(event, dict)] if isinstance(events, list) else []
