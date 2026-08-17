@@ -12,6 +12,7 @@ def load_dashboard_modules(response):
     script_tags = [
         '<script src="/static/leaderboards.js"></script>',
         '<script src="/static/form-fixtures.js"></script>',
+        '<script src="/static/standings-table.js"></script>',
     ]
     for script_tag in script_tags:
         if script_tag not in html and "</body>" in html:
