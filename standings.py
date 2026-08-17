@@ -70,6 +70,18 @@ def build_standings():
     return result
 
 
+def _image_content_type(content, fallback):
+    if content.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if content.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if content.startswith((b"GIF87a", b"GIF89a")):
+        return "image/gif"
+    if content.startswith(b"RIFF") and content[8:12] == b"WEBP":
+        return "image/webp"
+    return fallback or "application/octet-stream"
+
+
 def _badge_response(team_key):
     standings_data = build_standings()
     team = standings_data.get(team_key)
@@ -83,7 +95,7 @@ def _badge_response(team_key):
     except requests.RequestException:
         return jsonify({"error": "Badge unavailable."}), 502
 
-    content_type = upstream.headers.get("Content-Type", "image/jpeg")
+    content_type = _image_content_type(upstream.content, upstream.headers.get("Content-Type"))
     response = Response(upstream.content, status=200, content_type=content_type)
     response.headers["Cache-Control"] = "public, max-age=86400, s-maxage=86400"
     return response
