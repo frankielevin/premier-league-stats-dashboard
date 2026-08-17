@@ -13,49 +13,35 @@
   "routes": [
     {
       "src": "/api/h2h",
-      "dest": "h2h.py"
+      "dest": "h2h.py",
+      "headers": {
+        "Cache-Control": "public, s-maxage=21600, stale-while-revalidate=86400"
+      }
+    },
+    {
+      "src": "/api/stats",
+      "dest": "app.py",
+      "headers": {
+        "Cache-Control": "public, s-maxage=900, stale-while-revalidate=21600"
+      }
+    },
+    {
+      "src": "/api/stats/(.*)",
+      "dest": "app.py",
+      "headers": {
+        "Cache-Control": "public, s-maxage=900, stale-while-revalidate=21600"
+      }
+    },
+    {
+      "src": "/api/standings",
+      "dest": "app.py",
+      "headers": {
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600"
+      }
     },
     {
       "src": "/(.*)",
       "dest": "app.py"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/api/stats",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, s-maxage=900, stale-while-revalidate=21600"
-        }
-      ]
-    },
-    {
-      "source": "/api/stats/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, s-maxage=900, stale-while-revalidate=21600"
-        }
-      ]
-    },
-    {
-      "source": "/api/standings",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, s-maxage=300, stale-while-revalidate=3600"
-        }
-      ]
-    },
-    {
-      "source": "/api/h2h",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, s-maxage=21600, stale-while-revalidate=86400"
-        }
-      ]
     }
   ]
 }
