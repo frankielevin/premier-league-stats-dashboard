@@ -40,6 +40,9 @@ def _is_finished(match):
     status = str(match.get("match_status", "")).strip().lower()
     if status in {"finished", "ft", "after penalties", "aet"}:
         return True
+    match_dt = _match_datetime(match)
+    if match_dt != datetime.min and match_dt > datetime.now():
+        return False
     home = _score(match, "hometeam")
     away = _score(match, "awayteam")
     return home is not None and away is not None and status not in {
@@ -139,7 +142,7 @@ def build_form_fixtures():
         for name in core.FALLBACK_TEAM_NAMES
     }
 
-    now = datetime.now()
+    today = datetime.now().date()
     for match in events:
         home_key = _team_key(match, "hometeam")
         away_key = _team_key(match, "awayteam")
@@ -151,7 +154,7 @@ def build_form_fixtures():
         fixture = _fixture(match)
         if _is_finished(match):
             completed.append(fixture)
-        elif _match_datetime(match) >= now:
+        elif _match_datetime(match) != datetime.min and _match_datetime(match).date() >= today:
             upcoming.append(fixture)
 
     payload = {
