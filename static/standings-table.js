@@ -148,7 +148,7 @@
 
         subtitleEl.textContent = `${currentView[0].toUpperCase()}${currentView.slice(1)} standings · ${rows.length} clubs`;
         listEl.innerHTML = rows.map(({teamKey, team, split}) => {
-            const badge = team.badge ? `<img class="standings-badge" src="${escapeHtml(team.badge)}" alt="" loading="lazy">` : '';
+            const badge = team.badge ? `<img class="standings-badge" src="/api/standings?badge=${encodeURIComponent(teamKey)}" alt="">` : '';
             return `
                 <div class="standings-row${teamKey === selected ? ' selected' : ''}" data-team-key="${escapeHtml(teamKey)}">
                     <div class="standings-pos">${escapeHtml(split.position || '—')}</div>
@@ -210,12 +210,33 @@
         render();
     }));
 
+    async function waitForBadges() {
+        const badges = [...modal.querySelectorAll('.standings-badge')];
+        await Promise.all(badges.map(img => {
+            if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+            return new Promise(resolve => {
+                const done = () => resolve();
+                img.addEventListener('load', done, {once:true});
+                img.addEventListener('error', done, {once:true});
+            });
+        }));
+    }
+
     shotBtn.addEventListener('click', async () => {
         if (typeof window.html2canvas !== 'function') return;
-        const canvas = await window.html2canvas(modal, {backgroundColor:'#111217', useCORS:true, scale:1.25});
-        const link = document.createElement('a');
-        link.download = `championship-${currentView}-table.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+        shotBtn.disabled = true;
+        const originalText = shotBtn.textContent;
+        shotBtn.textContent = 'Preparing…';
+        try {
+            await waitForBadges();
+            const canvas = await window.html2canvas(modal, {backgroundColor:'#111217', useCORS:true, scale:1.25});
+            const link = document.createElement('a');
+            link.download = `championship-${currentView}-table.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        } finally {
+            shotBtn.disabled = false;
+            shotBtn.textContent = originalText;
+        }
     });
 })();
