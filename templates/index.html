@@ -209,6 +209,15 @@
 <script>
 const categories = ['attacking','passing','defending','goalkeeping','miscellaneous'];
 const lowerIsBetter = new Set(['OFF','GC','GC/M','YC','RC','FOUL','FOUL/M','PKC','POSS-L']);
+// Overall Stats Won deliberately uses one representative metric per concept.
+// Per-match versions of totals are still displayed but do not score a second point.
+const overallCompareMetrics = new Set([
+    'G','POSS%','SH','SOT%','SH-BLK','SH-IN','SH-OUT','A','OFF','WOOD',
+    'PASS','PASS%','PASS-KEY','CRS','CRS%','CNR',
+    'TKL','INT','CLR','BLK','DUEL%','AER-W',
+    'GC','SV','SV-BOX','SV-PK','CS',
+    'YC','RC','FOUL','PKC','PK-W','POSS-L','DRB%'
+]);
 const statsContainer = document.getElementById('stats-container');
 const compareContainer = document.getElementById('compare-container');
 const loading = document.getElementById('loading');
@@ -403,7 +412,7 @@ function calculateOverallWins(){
     let a=0,b=0;
     categories.forEach(cat=>{
         const s1=compareStats1[cat]?.stats||[], s2=compareStats2[cat]?.stats||[];
-        s1.filter(s=>s.abbrev!=='M').forEach(x=>{
+        s1.filter(s=>overallCompareMetrics.has(s.abbrev)).forEach(x=>{
             const y=s2.find(z=>z.abbrev===x.abbrev); if(!y)return;
             const w=winnerFor(x.abbrev,parseValue(x.club),parseValue(y.club));
             if(w==='a')a++; if(w==='b')b++;
@@ -426,7 +435,10 @@ function openCompareModal(category){
     document.getElementById('modal-stats-grid').innerHTML=s1.map(x=>{
         const y=s2.find(z=>z.abbrev===x.abbrev)||{club:'-',rank:'-'};
         const w=winnerFor(x.abbrev,parseValue(x.club),parseValue(y.club));
-        if(w==='a')aw++;if(w==='b')bw++;
+        if(overallCompareMetrics.has(x.abbrev)){
+            if(w==='a')aw++;
+            if(w==='b')bw++;
+        }
         const c1=w==='a'?'winner':w==='b'?'loser':'draw';
         const c2=w==='b'?'winner':w==='a'?'loser':'draw';
         return `<div class="modal-stat-item animate-in">
@@ -448,7 +460,7 @@ const overviewSections=[
     ['Attacking',[['G','attacking'],['G/M','attacking'],['POSS%','attacking'],['SH','attacking'],['SOT','attacking'],['SOT%','attacking']]],
     ['Passing',[['PASS/M','passing'],['PASS%','passing'],['PASS-KEY','passing'],['CRS','passing']]],
     ['Defending',[['TKL','defending'],['INT','defending'],['CLR','defending'],['DUEL%','defending']]],
-    ['Goalkeeping',[['GC','goalkeeping'],['GC/M','goalkeeping'],['SV%','goalkeeping'],['CS','goalkeeping']]]
+    ['Goalkeeping',[['GC','goalkeeping'],['GC/M','goalkeeping'],['SV/M','goalkeeping'],['CS','goalkeeping']]]
 ];
 async function openOverview(){
     document.getElementById('overview-team-name').textContent=selectedTeam.textContent.trim();
@@ -491,14 +503,18 @@ document.getElementById('h2h-btn').addEventListener('click',async()=>{
 function renderH2H(data){
     const body=document.getElementById('h2h-body');
     const recent=(data.recent||[]).slice(0,5);
+    if(!recent.length){
+        body.innerHTML=`<div class="h2h-error">No previous meetings available from APIfootball for ${data.team1} and ${data.team2}.</div>`;
+        return;
+    }
     body.innerHTML=`<div class="h2h-summary">
-        <div class="h2h-played">${data.played} meeting${data.played===1?'':'s'}</div>
+        <div class="h2h-played">Last ${data.played} meeting${data.played===1?'':'s'}</div>
         <div class="h2h-record">
             <div class="h2h-stat-block h2h-win"><span class="h2h-stat-num">${data.overall.w}</span><span class="h2h-stat-label">${data.team1} Wins</span></div>
             <div class="h2h-stat-block h2h-draw"><span class="h2h-stat-num">${data.overall.d}</span><span class="h2h-stat-label">Draws</span></div>
             <div class="h2h-stat-block h2h-loss"><span class="h2h-stat-num">${data.overall.l}</span><span class="h2h-stat-label">${data.team2} Wins</span></div>
         </div></div>
-        ${recent.length?`<div class="h2h-recent-header">Recent Meetings</div><div class="h2h-recent-list">${recent.map(m=>`<div class="h2h-match-row"><span class="h2h-match-date">${m.date}</span><div class="h2h-match-score"><span class="h2h-match-team">${m.home}</span><span class="h2h-score-box">${m.home_score} – ${m.away_score}</span><span class="h2h-match-team">${m.away}</span></div><span class="h2h-match-season">${m.season}</span></div>`).join('')}</div>`:''}`;
+        <div class="h2h-recent-header">Recent Meetings</div><div class="h2h-recent-list">${recent.map(m=>`<div class="h2h-match-row"><span class="h2h-match-date">${m.date}</span><div class="h2h-match-score"><span class="h2h-match-team">${m.home}</span><span class="h2h-score-box">${m.home_score} – ${m.away_score}</span><span class="h2h-match-team">${m.away}</span></div><span class="h2h-match-season">${m.season}</span></div>`).join('')}</div>`;
 }
 document.getElementById('h2h-close-btn').addEventListener('click',()=>closeOverlay(h2hOverlay));
 h2hOverlay.addEventListener('click',e=>{if(e.target===h2hOverlay)closeOverlay(h2hOverlay)});
