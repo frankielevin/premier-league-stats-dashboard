@@ -4,9 +4,17 @@
     {
       "src": "app.py",
       "use": "@vercel/python"
+    },
+    {
+      "src": "h2h.py",
+      "use": "@vercel/python"
     }
   ],
   "routes": [
+    {
+      "src": "/api/h2h",
+      "dest": "h2h.py"
+    },
     {
       "src": "/(.*)",
       "dest": "app.py"
