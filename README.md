@@ -39,6 +39,13 @@ You can then check `/api/health`. It should return `"api_key_configured": true`.
 - Club comparison
 - Championship standings in Overview
 - Head-to-head records
+- Clickable Championship stat leaderboards
+
+## Stat leaderboards
+
+Every standard stat card can open a Championship-wide leaderboard for that metric. The selected club is highlighted, ranking direction follows the same higher-is-better/lower-is-better rules as the main dashboard, ties use the existing league ranking logic, and incomplete provider data remains unranked at the bottom rather than being treated as zero.
+
+The leaderboard endpoint reuses the dashboard's existing season aggregation and is edge-cached for 15 minutes, so it does not introduce a new APIfootball data source or 24 separate team requests.
 
 ## Head-to-head records
 
@@ -53,6 +60,7 @@ The dashboard can display totals and per-match versions of the same statistic, b
 The app keeps short-lived in-process caches and configures Vercel edge caching for the public API responses:
 
 - stats: 15 minutes, with stale-while-revalidate for 1 hour
+- stat leaderboards: 15 minutes, with stale-while-revalidate for 6 hours
 - standings: 10 minutes, with stale-while-revalidate for 1 hour
 - head-to-head: 6 hours, with stale-while-revalidate for 24 hours
 
@@ -69,5 +77,3 @@ Save Percentage is intentionally not published because the provider's saves and 
 ## Known limitation
 
 The free API response tested for the Championship does not include xG/xGA, so those metrics are not shown.
-
-<!-- QA preview trigger: clean branch created from the fully validated Championship build. -->
