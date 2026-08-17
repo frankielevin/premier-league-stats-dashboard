@@ -2,7 +2,8 @@ from flask import Flask, render_template, jsonify, request
 import os
 import re
 import time
-from datetime import date, datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import date, datetime
 
 import requests
 
@@ -13,9 +14,8 @@ LEAGUE_ID = "153"
 SEASON_LABEL = "2026/2027"
 SEASON_START = date(2026, 8, 1)
 API_KEY_ENV = "APIFOOTBALL_KEY"
+DETAIL_MAX_WORKERS = 8
 
-# Fallback names let the page render before the API key is configured.
-# IDs are filled from get_teams at runtime.
 FALLBACK_TEAM_NAMES = [
     "Birmingham", "Blackburn", "Bolton", "Bristol City", "Burnley", "Cardiff",
     "Charlton", "Derby", "Lincoln", "Middlesbrough", "Millwall", "Norwich",
@@ -31,11 +31,12 @@ DISPLAY_NAME_OVERRIDES = {
 }
 
 CACHE_TTLS = {
-    "teams": 21600,       # 6 hours
-    "events": 900,        # 15 minutes
-    "aggregates": 900,    # 15 minutes
-    "standings": 600,     # 10 minutes
-    "h2h": 21600,         # 6 hours
+    "teams": 21600,
+    "events": 900,
+    "aggregates": 900,
+    "standings": 600,
+    "h2h": 21600,
+    "match_stats": 21600,
 }
 
 _cache = {
@@ -44,9 +45,12 @@ _cache = {
     "aggregates": None,
     "standings": None,
     "h2h": {},
+    "match_stats": {},
 }
 
-
+# Stat rows that are actually supported by the API feed or can be safely derived.
+# Save percentage is deliberately excluded: the feed's saves and shots-on-target
+# figures do not consistently reconcile, so publishing a derived save % would be misleading.
 STAT_DEFINITIONS = {
     "attacking": [
         ("M", "Matches", "matches", "int"),
@@ -97,7 +101,6 @@ STAT_DEFINITIONS = {
         ("GC/M", "Goals Conceded per Match", "goals_against_per_match", "decimal"),
         ("SV", "Saves", "saves", "int"),
         ("SV/M", "Saves per Match", "saves_per_match", "decimal"),
-        ("SV%", "Save Percentage", "save_percentage", "percent"),
         ("SV-BOX", "Saves Inside Box", "saves_inside_box", "int"),
         ("SV-PK", "Penalty Saves", "penalty_saves", "int"),
         ("CS", "Clean Sheets", "clean_sheets", "int"),
@@ -114,16 +117,75 @@ STAT_DEFINITIONS = {
         ("DRB", "Dribbles Attempted", "dribbles_attempted", "int"),
         ("DRB-S", "Successful Dribbles", "dribbles_successful", "int"),
         ("DRB%", "Dribble Success %", "dribble_success_pct", "percent"),
-        ("AER-W", "Aerial Wins", "aerials_won", "int"),
-        ("DUEL-W", "Duels Won", "duels_won", "int"),
     ],
 }
 
-# Rank 1 is always generated as "best" by this backend.
 LOWER_IS_BETTER = {
     "offsides", "goals_against", "goals_against_per_match",
     "yellow_cards", "red_cards", "fouls", "fouls_per_match",
     "penalties_conceded", "dispossessed",
+}
+
+# Metrics calculated from one or more source metrics. A derived value is only
+# exposed if every source metric has complete coverage across the team's matches.
+DERIVED_REQUIREMENTS = {
+    "goals_per_match": ("goals",),
+    "possession": ("possession_raw",),
+    "shots_per_match": ("shots",),
+    "shot_accuracy": ("shots", "shots_on_target"),
+    "passes_per_match": ("passes",),
+    "pass_completion": ("passes", "passes_accurate"),
+    "key_passes_per_match": ("key_passes",),
+    "cross_accuracy": ("crosses", "crosses_accurate"),
+    "tackles_per_match": ("tackles",),
+    "interceptions_per_match": ("interceptions",),
+    "clearances_per_match": ("clearances",),
+    "duel_win_pct": ("duels_total", "duels_won"),
+    "goals_against_per_match": ("goals_against",),
+    "saves_per_match": ("saves",),
+    "fouls_per_match": ("fouls",),
+    "dribble_success_pct": ("dribbles_attempted", "dribbles_successful"),
+}
+
+ALWAYS_COMPLETE = {"matches", "goals", "goals_against", "clean_sheets"}
+
+TEAM_STAT_MAPPING = [
+    ("Shots Total", "shots"),
+    ("Shots On Goal", "shots_on_target"),
+    ("Shots Off Goal", "shots_off_target"),
+    ("Shots Blocked", "shots_blocked"),
+    ("Shots Inside Box", "shots_inside_box"),
+    ("Shots Outside Box", "shots_outside_box"),
+    ("Fouls", "fouls"),
+    ("Corners", "corners"),
+    ("Offsides", "offsides"),
+    ("Saves", "saves"),
+    ("Passes Total", "passes"),
+    ("Passes Accurate", "passes_accurate"),
+    ("Yellow Cards", "yellow_cards"),
+    ("Red Cards", "red_cards"),
+]
+
+PLAYER_STAT_MAPPING = {
+    "player_tackles": "tackles",
+    "player_blocks": "blocks",
+    "player_total_crosses": "crosses",
+    "player_acc_crosses": "crosses_accurate",
+    "player_interceptions": "interceptions",
+    "player_clearances": "clearances",
+    "player_dispossesed": "dispossessed",
+    "player_saves_inside_box": "saves_inside_box",
+    "player_duels_total": "duels_total",
+    "player_duels_won": "duels_won",
+    "player_aerials_won": "aerials_won",
+    "player_dribble_attempts": "dribbles_attempted",
+    "player_dribble_succ": "dribbles_successful",
+    "player_pen_save": "penalty_saves",
+    "player_pen_committed": "penalties_conceded",
+    "player_pen_won": "penalties_won",
+    "player_hit_woodwork": "woodwork",
+    "player_key_passes": "key_passes",
+    "player_assists": "assists",
 }
 
 
@@ -131,25 +193,15 @@ def _slugify(value):
     value = (value or "").strip().lower().replace("&", "and")
     value = re.sub(r"[^a-z0-9]+", "-", value).strip("-")
     aliases = {
-        "west-ham-united": "west-ham",
-        "west-ham": "west-ham",
-        "sheffield-united": "sheffield-utd",
-        "west-bromwich-albion": "west-brom",
-        "queens-park-rangers": "qpr",
-        "wolverhampton-wanderers": "wolves",
-        "blackburn-rovers": "blackburn",
-        "bolton-wanderers": "bolton",
-        "bristol-city": "bristol-city",
-        "cardiff-city": "cardiff",
-        "charlton-athletic": "charlton",
-        "derby-county": "derby",
-        "lincoln-city": "lincoln",
-        "norwich-city": "norwich",
-        "preston-north-end": "preston",
-        "stoke-city": "stoke",
-        "swansea-city": "swansea",
-        "watford": "watford",
-        "wrexham": "wrexham",
+        "west-ham-united": "west-ham", "west-ham": "west-ham",
+        "sheffield-united": "sheffield-utd", "west-bromwich-albion": "west-brom",
+        "queens-park-rangers": "qpr", "wolverhampton-wanderers": "wolves",
+        "blackburn-rovers": "blackburn", "bolton-wanderers": "bolton",
+        "bristol-city": "bristol-city", "cardiff-city": "cardiff",
+        "charlton-athletic": "charlton", "derby-county": "derby",
+        "lincoln-city": "lincoln", "norwich-city": "norwich",
+        "preston-north-end": "preston", "stoke-city": "stoke",
+        "swansea-city": "swansea", "watford": "watford", "wrexham": "wrexham",
         "birmingham-city": "birmingham",
     }
     return aliases.get(value, value)
@@ -161,7 +213,7 @@ def _display_name(name):
 
 def _cache_get(name):
     entry = _cache.get(name)
-    if not entry or name == "h2h":
+    if not entry or name in {"h2h", "match_stats"}:
         return None
     if time.time() - entry["ts"] > CACHE_TTLS[name]:
         return None
@@ -199,7 +251,6 @@ def fetch_teams():
     cached = _cache_get("teams")
     if cached:
         return cached
-
     try:
         data = _api_get("get_teams", league_id=LEAGUE_ID)
         teams = {}
@@ -220,7 +271,6 @@ def fetch_teams():
             return teams
     except Exception:
         pass
-
     teams = _fallback_teams()
     _cache_set("teams", teams)
     return teams
@@ -234,24 +284,15 @@ def _is_finished(match):
 
 
 def _fetch_events_call():
-    api_key = os.getenv(API_KEY_ENV, "").strip()
-    if not api_key:
-        raise RuntimeError(
-            f"{API_KEY_ENV} is not configured. Add your APIfootball key as an environment variable."
-        )
-    params = {
-        "action": "get_events",
-        "from": SEASON_START.isoformat(),
-        "to": max(date.today(), SEASON_START).isoformat(),
-        "league_id": LEAGUE_ID,
-        "withPlayerStats": "1",
-        "APIkey": api_key,
-    }
-    response = requests.get(API_BASE, params=params, timeout=60)
-    response.raise_for_status()
-    data = response.json()
-    if isinstance(data, dict) and "error" in data:
-        raise RuntimeError(str(data["error"]))
+    data = _api_get(
+        "get_events",
+        **{
+            "from": SEASON_START.isoformat(),
+            "to": max(date.today(), SEASON_START).isoformat(),
+            "league_id": LEAGUE_ID,
+            "withPlayerStats": "1",
+        },
+    )
     data = [m for m in data if isinstance(m, dict) and _is_finished(m)] if isinstance(data, list) else []
     _cache_set("events", data)
     return data
@@ -277,7 +318,7 @@ def _to_number(value):
 
 
 def _normalized_match_stats(rows):
-    """Last valid duplicate wins (APIfootball occasionally returns duplicate fields)."""
+    """Keep the last valid duplicate; APIfootball can emit duplicate stat rows."""
     result = {}
     for row in rows or []:
         stat_type = row.get("type")
@@ -288,68 +329,154 @@ def _normalized_match_stats(rows):
     return result
 
 
+def _match_stats_cache_get(match_id):
+    entry = _cache["match_stats"].get(str(match_id))
+    if not entry:
+        return None
+    if time.time() - entry["ts"] > CACHE_TTLS["match_stats"]:
+        return None
+    return entry["data"]
+
+
+def _fetch_match_statistics(match_id):
+    """Fetch the dedicated statistics payload for one match, including player stats."""
+    match_id = str(match_id or "")
+    if not match_id:
+        return {"statistics": [], "player_statistics": []}
+    cached = _match_stats_cache_get(match_id)
+    if cached is not None:
+        return cached
+    data = _api_get("get_statistics", match_id=match_id)
+    payload = {}
+    if isinstance(data, dict):
+        payload = data.get(match_id) or {}
+        if not payload and "statistics" in data:
+            payload = data
+    elif isinstance(data, list) and data:
+        payload = data[0] if isinstance(data[0], dict) else {}
+    result = {
+        "statistics": payload.get("statistics", []) if isinstance(payload, dict) else [],
+        "player_statistics": payload.get("player_statistics", []) if isinstance(payload, dict) else [],
+    }
+    _cache["match_stats"][match_id] = {"ts": time.time(), "data": result}
+    return result
+
+
+def _detail_payloads(events):
+    """Fetch details only for matches whose get_events row lacks player statistics."""
+    needed = [m for m in events if m.get("match_id") and not m.get("player_statistics")]
+    if not needed:
+        return {}
+    results = {}
+    workers = min(DETAIL_MAX_WORKERS, len(needed))
+    with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
+        futures = {pool.submit(_fetch_match_statistics, m.get("match_id")): str(m.get("match_id")) for m in needed}
+        for future in as_completed(futures):
+            match_id = futures[future]
+            try:
+                results[match_id] = future.result()
+            except Exception:
+                results[match_id] = {"statistics": [], "player_statistics": []}
+    return results
+
+
 def _blank_record():
     fields = [
-        "matches", "goals", "goals_against", "clean_sheets",
-        "possession_sum", "possession_games", "shots", "shots_on_target",
-        "shots_off_target", "shots_blocked", "shots_inside_box", "shots_outside_box",
-        "fouls", "corners", "offsides", "saves", "passes", "passes_accurate",
-        "tackles", "blocks", "crosses", "crosses_accurate", "interceptions",
-        "clearances", "dispossessed", "saves_inside_box", "duels_total", "duels_won",
-        "aerials_won", "dribbles_attempted", "dribbles_successful", "penalty_saves",
-        "penalties_conceded", "penalties_won", "woodwork", "key_passes", "assists",
-        "yellow_cards", "red_cards",
+        "matches", "goals", "goals_against", "clean_sheets", "possession_sum",
+        "shots", "shots_on_target", "shots_off_target", "shots_blocked",
+        "shots_inside_box", "shots_outside_box", "fouls", "corners", "offsides",
+        "saves", "passes", "passes_accurate", "tackles", "blocks", "crosses",
+        "crosses_accurate", "interceptions", "clearances", "dispossessed",
+        "saves_inside_box", "duels_total", "duels_won", "aerials_won",
+        "dribbles_attempted", "dribbles_successful", "penalty_saves",
+        "penalties_conceded", "penalties_won", "woodwork", "key_passes",
+        "assists", "yellow_cards", "red_cards",
     ]
-    return {field: 0.0 for field in fields}
+    record = {field: 0.0 for field in fields}
+    record["_coverage"] = {}
+    return record
+
+
+def _mark_coverage(record, metric):
+    record["_coverage"][metric] = record["_coverage"].get(metric, 0) + 1
 
 
 def _add_team_stat(record, stats, stat_type, key, side):
     values = stats.get(stat_type)
     if not values:
-        return
+        return False
     record[key] += values[0 if side == "home" else 1]
+    _mark_coverage(record, key)
+    return True
 
 
-def _aggregate_player_stats(record, players, team_side):
-    fields = {
-        "player_tackles": "tackles",
-        "player_blocks": "blocks",
-        "player_total_crosses": "crosses",
-        "player_acc_crosses": "crosses_accurate",
-        "player_interceptions": "interceptions",
-        "player_clearances": "clearances",
-        "player_dispossesed": "dispossessed",
-        "player_saves_inside_box": "saves_inside_box",
-        "player_duels_total": "duels_total",
-        "player_duels_won": "duels_won",
-        "player_aerials_won": "aerials_won",
-        "player_dribble_attempts": "dribbles_attempted",
-        "player_dribble_succ": "dribbles_successful",
-        "player_pen_save": "penalty_saves",
-        "player_pen_committed": "penalties_conceded",
-        "player_pen_won": "penalties_won",
-        "player_hit_woodwork": "woodwork",
-        "player_key_passes": "key_passes",
-        "player_assists": "assists",
-    }
-    for player in players or []:
-        if player.get("team_name") != team_side:
+def _player_totals(players, team_side):
+    team_players = [p for p in (players or []) if p.get("team_name") == team_side]
+    totals = {}
+    available = set()
+    if not team_players:
+        return totals, available
+    for source, dest in PLAYER_STAT_MAPPING.items():
+        values = []
+        for player in team_players:
+            value = _to_number(player.get(source))
+            if value is not None:
+                values.append(value)
+        if values:
+            totals[dest] = sum(values)
+            available.add(dest)
+    for source, dest in (("player_yellowcards", "yellow_cards"), ("player_redcards", "red_cards")):
+        values = []
+        for player in team_players:
+            value = _to_number(player.get(source))
+            if value is not None:
+                values.append(value)
+        if values:
+            totals[dest] = sum(values)
+            available.add(dest)
+    return totals, available
+
+
+def _apply_player_totals(record, totals, available, already_covered):
+    for metric in available:
+        if metric in already_covered:
             continue
-        for source, dest in fields.items():
-            number = _to_number(player.get(source))
-            if number is not None:
-                record[dest] += number
+        record[metric] += totals.get(metric, 0.0)
+        _mark_coverage(record, metric)
 
 
 def _safe_div(numerator, denominator, multiplier=1.0):
-    if not denominator:
+    if denominator is None or denominator == 0:
         return 0.0
     return numerator / denominator * multiplier
 
 
+def _metric_complete(record, metric):
+    matches = int(record.get("matches", 0))
+    if matches <= 0:
+        return False
+    if metric in ALWAYS_COMPLETE:
+        return True
+    if metric in DERIVED_REQUIREMENTS:
+        return all(_metric_complete(record, source) for source in DERIVED_REQUIREMENTS[metric])
+    return int(record.get("_coverage", {}).get(metric, 0)) == matches
+
+
+def _metric_coverage(record, metric):
+    matches = int(record.get("matches", 0))
+    if metric in ALWAYS_COMPLETE:
+        return matches, matches
+    if metric in DERIVED_REQUIREMENTS:
+        sources = DERIVED_REQUIREMENTS[metric]
+        available = min((_metric_coverage(record, source)[0] for source in sources), default=0)
+        return available, matches
+    return int(record.get("_coverage", {}).get(metric, 0)), matches
+
+
 def _finalize_record(record):
     m = record["matches"]
-    record["possession"] = _safe_div(record["possession_sum"], record["possession_games"])
+    possession_games = record.get("_coverage", {}).get("possession_raw", 0)
+    record["possession"] = _safe_div(record["possession_sum"], possession_games)
     record["goals_per_match"] = _safe_div(record["goals"], m)
     record["shots_per_match"] = _safe_div(record["shots"], m)
     record["shot_accuracy"] = _safe_div(record["shots_on_target"], record["shots"], 100)
@@ -363,7 +490,6 @@ def _finalize_record(record):
     record["duel_win_pct"] = _safe_div(record["duels_won"], record["duels_total"], 100)
     record["goals_against_per_match"] = _safe_div(record["goals_against"], m)
     record["saves_per_match"] = _safe_div(record["saves"], m)
-    record["save_percentage"] = _safe_div(record["saves"], record["saves"] + record["goals_against"], 100)
     record["fouls_per_match"] = _safe_div(record["fouls"], m)
     record["dribble_success_pct"] = _safe_div(record["dribbles_successful"], record["dribbles_attempted"], 100)
     return record
@@ -375,25 +501,22 @@ def build_aggregates():
         return cached
 
     teams = fetch_teams()
-    id_to_key = {
-        str(team["api_id"]): key for key, team in teams.items() if team.get("api_id")
-    }
+    id_to_key = {str(team["api_id"]): key for key, team in teams.items() if team.get("api_id")}
     aggregates = {key: _blank_record() for key in teams}
     events = fetch_season_events()
+    details = _detail_payloads(events)
 
     for match in events:
         home_id = str(match.get("match_hometeam_id", ""))
         away_id = str(match.get("match_awayteam_id", ""))
         home_key = id_to_key.get(home_id) or _slugify(match.get("match_hometeam_name", ""))
         away_key = id_to_key.get(away_id) or _slugify(match.get("match_awayteam_name", ""))
-
         if home_key not in aggregates:
             aggregates[home_key] = _blank_record()
         if away_key not in aggregates:
             aggregates[away_key] = _blank_record()
 
-        home = aggregates[home_key]
-        away = aggregates[away_key]
+        home, away = aggregates[home_key], aggregates[away_key]
         home["matches"] += 1
         away["matches"] += 1
 
@@ -403,7 +526,6 @@ def build_aggregates():
             home_goals = _to_number(match.get("match_hometeam_score")) or 0
         if away_goals is None:
             away_goals = _to_number(match.get("match_awayteam_score")) or 0
-
         home["goals"] += home_goals
         home["goals_against"] += away_goals
         away["goals"] += away_goals
@@ -413,41 +535,35 @@ def build_aggregates():
         if home_goals == 0:
             away["clean_sheets"] += 1
 
+        match_id = str(match.get("match_id", ""))
+        detail = details.get(match_id, {})
         stats = _normalized_match_stats(match.get("statistics", []))
-        mapping = [
-            ("Shots Total", "shots"),
-            ("Shots On Goal", "shots_on_target"),
-            ("Shots Off Goal", "shots_off_target"),
-            ("Shots Blocked", "shots_blocked"),
-            ("Shots Inside Box", "shots_inside_box"),
-            ("Shots Outside Box", "shots_outside_box"),
-            ("Fouls", "fouls"),
-            ("Corners", "corners"),
-            ("Offsides", "offsides"),
-            ("Saves", "saves"),
-            ("Passes Total", "passes"),
-            ("Passes Accurate", "passes_accurate"),
-            ("Yellow Cards", "yellow_cards"),
-            ("Red Cards", "red_cards"),
-        ]
-        for stat_type, key in mapping:
-            _add_team_stat(home, stats, stat_type, key, "home")
-            _add_team_stat(away, stats, stat_type, key, "away")
+        detail_stats = _normalized_match_stats(detail.get("statistics", []))
+        if detail_stats:
+            stats.update(detail_stats)
+
+        covered_home, covered_away = set(), set()
+        for stat_type, key in TEAM_STAT_MAPPING:
+            if _add_team_stat(home, stats, stat_type, key, "home"):
+                covered_home.add(key)
+            if _add_team_stat(away, stats, stat_type, key, "away"):
+                covered_away.add(key)
 
         poss = stats.get("Ball Possession")
         if poss:
             home["possession_sum"] += poss[0]
             away["possession_sum"] += poss[1]
-            home["possession_games"] += 1
-            away["possession_games"] += 1
+            _mark_coverage(home, "possession_raw")
+            _mark_coverage(away, "possession_raw")
 
-        players = match.get("player_statistics", [])
-        _aggregate_player_stats(home, players, "home")
-        _aggregate_player_stats(away, players, "away")
+        players = match.get("player_statistics") or detail.get("player_statistics") or []
+        home_totals, home_available = _player_totals(players, "home")
+        away_totals, away_available = _player_totals(players, "away")
+        _apply_player_totals(home, home_totals, home_available, covered_home)
+        _apply_player_totals(away, away_totals, away_available, covered_away)
 
     for key in list(aggregates):
         aggregates[key] = _finalize_record(aggregates[key])
-
     _cache_set("aggregates", aggregates)
     return aggregates
 
@@ -464,19 +580,15 @@ def _ordinal(number):
 def _metric_ranks(aggregates, metric):
     values = []
     for key, record in aggregates.items():
-        if record.get("matches", 0) <= 0:
+        if not _metric_complete(record, metric):
             continue
         value = record.get(metric)
         if value is None:
             continue
         values.append((key, float(value)))
-
     reverse = metric not in LOWER_IS_BETTER
     values.sort(key=lambda item: item[1], reverse=reverse)
-
-    ranks = {}
-    previous_value = None
-    previous_rank = 0
+    ranks, previous_value, previous_rank = {}, None, 0
     for index, (key, value) in enumerate(values, 1):
         if previous_value is not None and abs(value - previous_value) < 1e-9:
             rank = previous_rank
@@ -490,7 +602,7 @@ def _metric_ranks(aggregates, metric):
 
 def _format_value(value, kind):
     if value is None:
-        return "-"
+        return "—"
     if kind == "int":
         return f"{int(round(value)):,}"
     if kind == "percent":
@@ -504,23 +616,27 @@ def stats_for_team(team_key):
     teams = fetch_teams()
     if team_key not in teams:
         team_key = "west-ham" if "west-ham" in teams else next(iter(teams))
-
     aggregates = build_aggregates()
     record = aggregates.get(team_key, _blank_record())
     output = {}
-
     for category, definitions in STAT_DEFINITIONS.items():
         stats = []
         for abbrev, name, metric, kind in definitions:
-            rank_map = _metric_ranks(aggregates, metric)
+            complete = _metric_complete(record, metric)
+            available_matches, total_matches = _metric_coverage(record, metric)
+            rank_map = _metric_ranks(aggregates, metric) if complete else {}
             stats.append({
                 "abbrev": abbrev,
                 "name": name,
-                "club": _format_value(record.get(metric, 0), kind),
+                "club": _format_value(record.get(metric) if complete else None, kind),
                 "rank": rank_map.get(team_key, "-"),
+                "coverage": {
+                    "available_matches": available_matches,
+                    "total_matches": total_matches,
+                    "complete": complete,
+                },
             })
         output[category] = {"success": True, "stats": stats, "category": category}
-
     output["team"] = {"key": team_key, "name": teams[team_key]["name"]}
     output["source"] = "APIfootball.com"
     return output
@@ -530,12 +646,10 @@ def fetch_standings():
     cached = _cache_get("standings")
     if cached:
         return cached
-
     teams = fetch_teams()
     by_id = {str(v.get("api_id")): k for k, v in teams.items() if v.get("api_id")}
     by_name = {_slugify(v.get("api_name") or v.get("name")): k for k, v in teams.items()}
     data = _api_get("get_standings", league_id=LEAGUE_ID)
-
     result = {}
     for row in data if isinstance(data, list) else []:
         api_id = str(row.get("team_id", ""))
@@ -550,7 +664,6 @@ def fetch_standings():
             }
         except (TypeError, ValueError):
             continue
-
     _cache_set("standings", result)
     return result
 
@@ -561,12 +674,10 @@ def fetch_h2h_data(team1_key, team2_key):
         return {"error": "One or both teams could not be found."}
     if team1_key == team2_key:
         return {"error": "Please select two different teams."}
-
     id1 = teams[team1_key].get("api_id")
     id2 = teams[team2_key].get("api_id")
     if not id1 or not id2:
         return {"error": "Head-to-head data is unavailable until team IDs are loaded from APIfootball."}
-
     cache_key = f"{min(int(id1), int(id2))}-{max(int(id1), int(id2))}"
     cached = _cache["h2h"].get(cache_key)
     if cached and time.time() - cached["ts"] < CACHE_TTLS["h2h"]:
@@ -576,12 +687,10 @@ def fetch_h2h_data(team1_key, team2_key):
         matches = data.get("firstTeam_VS_secondTeam", []) if isinstance(data, dict) else []
         _cache["h2h"][cache_key] = {"ts": time.time(), "data": matches}
 
-    name1 = teams[team1_key]["name"]
-    name2 = teams[team2_key]["name"]
+    name1, name2 = teams[team1_key]["name"], teams[team2_key]["name"]
     w = d = l = hw = hd = hl = aw = ad = al = 0
     goals_for = goals_against = 0
     recent = []
-
     for match in matches:
         if not _is_finished(match):
             continue
@@ -595,60 +704,48 @@ def fetch_h2h_data(team1_key, team2_key):
             as_ = _to_number(match.get("match_awayteam_score"))
         if hs is None or as_ is None:
             continue
-
         t1_home = home_id == str(id1)
         if not t1_home and away_id != str(id1):
             continue
         t1_score, t2_score = (hs, as_) if t1_home else (as_, hs)
         goals_for += int(t1_score)
         goals_against += int(t2_score)
-
         if t1_score > t2_score:
             w += 1
-            if t1_home:
-                hw += 1
-            else:
-                aw += 1
+            if t1_home: hw += 1
+            else: aw += 1
         elif t1_score < t2_score:
             l += 1
-            if t1_home:
-                hl += 1
-            else:
-                al += 1
+            if t1_home: hl += 1
+            else: al += 1
         else:
             d += 1
-            if t1_home:
-                hd += 1
-            else:
-                ad += 1
-
+            if t1_home: hd += 1
+            else: ad += 1
         raw_date = match.get("match_date", "")
         try:
             date_str = datetime.strptime(raw_date, "%Y-%m-%d").strftime("%d %b %Y")
         except Exception:
             date_str = raw_date
-
         recent.append({
             "home": _display_name(match.get("match_hometeam_name", "")),
             "away": _display_name(match.get("match_awayteam_name", "")),
-            "home_score": int(hs),
-            "away_score": int(as_),
+            "home_score": int(hs), "away_score": int(as_),
             "season": match.get("league_year") or match.get("league_name", ""),
             "date": date_str,
         })
-
-    recent.sort(key=lambda m: datetime.strptime(m["date"], "%d %b %Y") if m["date"] else datetime.min, reverse=True)
-
+    def _recent_sort_key(item):
+        try:
+            return datetime.strptime(item.get("date", ""), "%d %b %Y")
+        except Exception:
+            return datetime.min
+    recent.sort(key=_recent_sort_key, reverse=True)
     return {
-        "team1": name1,
-        "team2": name2,
-        "played": w + d + l,
+        "team1": name1, "team2": name2, "played": w + d + l,
         "overall": {"w": w, "d": d, "l": l},
         "home": {"w": hw, "d": hd, "l": hl},
         "away": {"w": aw, "d": ad, "l": al},
-        "goals_for": goals_for,
-        "goals_against": goals_against,
-        "recent": recent,
+        "goals_for": goals_for, "goals_against": goals_against, "recent": recent,
     }
 
 
@@ -703,7 +800,6 @@ def get_h2h():
 
 @app.route("/api/team-news")
 def get_team_news():
-    # Keep the existing UI functional without introducing another paid/scraped dependency.
     return jsonify({
         "team1": {"players": [], "error": "Team news is not included in the free APIfootball feed."},
         "team2": {"players": [], "error": "Team news is not included in the free APIfootball feed."},
@@ -716,16 +812,8 @@ def get_predicted_lineups():
     team2_key = request.args.get("team2", "burnley")
     teams = fetch_teams()
     return jsonify({
-        "team1": {
-            "name": teams.get(team1_key, {}).get("name", team1_key),
-            "starters": [],
-            "error": "Predicted lineups are not included in the free APIfootball feed.",
-        },
-        "team2": {
-            "name": teams.get(team2_key, {}).get("name", team2_key),
-            "starters": [],
-            "error": "Predicted lineups are not included in the free APIfootball feed.",
-        },
+        "team1": {"name": teams.get(team1_key, {}).get("name", team1_key), "starters": [], "error": "Predicted lineups are not included in the free APIfootball feed."},
+        "team2": {"name": teams.get(team2_key, {}).get("name", team2_key), "starters": [], "error": "Predicted lineups are not included in the free APIfootball feed."},
         "sameMatch": False,
     })
 
