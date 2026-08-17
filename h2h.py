@@ -8,6 +8,7 @@ import requests
 
 app = Flask(__name__)
 
+# Dedicated, cacheable last-five head-to-head endpoint for Compare mode.
 API_BASE = "https://apiv3.apifootball.com/"
 LEAGUE_ID = "153"
 API_KEY_ENV = "APIFOOTBALL_KEY"
