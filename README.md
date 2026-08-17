@@ -69,3 +69,5 @@ Save Percentage is intentionally not published because the provider's saves and 
 ## Known limitation
 
 The free API response tested for the Championship does not include xG/xGA, so those metrics are not shown.
+
+<!-- QA preview trigger: clean branch created from the fully validated Championship build. -->
