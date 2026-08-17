@@ -37,6 +37,20 @@
         .standings-loading, .standings-error { padding:48px 24px; text-align:center; opacity:.72; }
         .standings-error { color:#ffb6ae; }
         .standings-foot { padding:7px 16px 9px; border-top:1px solid rgba(255,255,255,.06); font-size:10px; opacity:.48; text-align:center; }
+
+        /* Purpose-built 1280x720 YouTube export. Only the table is cloned into this stage. */
+        .standings-export-stage { position:fixed; left:-20000px; top:0; width:1280px; height:720px; display:flex; align-items:center; justify-content:center; box-sizing:border-box; padding:28px 42px; background:#111217; color:#fff; pointer-events:none; overflow:hidden; }
+        .standings-export-table { width:1196px; max-width:none; overflow:hidden !important; background:#111217; border:1px solid rgba(255,255,255,.12); border-radius:14px; box-sizing:border-box; }
+        .standings-export-table .standings-table-head, .standings-export-table .standings-row { grid-template-columns:54px minmax(260px,1fr) repeat(4,54px) repeat(3,62px) 68px !important; column-gap:6px; }
+        .standings-export-table .standings-table-head { padding:8px 18px !important; font-size:12px !important; border-bottom:1px solid rgba(255,255,255,.09); opacity:.62; }
+        .standings-export-table .standings-list { padding:7px 14px 9px !important; overflow:visible !important; }
+        .standings-export-table .standings-row { min-height:24px !important; padding:1px 6px !important; font-size:13px !important; }
+        .standings-export-table .standings-pos { font-size:13px !important; }
+        .standings-export-table .standings-team { gap:9px; font-size:13px !important; }
+        .standings-export-table .standings-num { font-size:13px !important; }
+        .standings-export-table .standings-points { font-size:14px !important; }
+        .standings-export-table .standings-badge { width:19px !important; height:19px !important; }
+
         @media (max-height:800px) and (min-width:821px) {
             .standings-head { padding:11px 20px 9px; }
             .standings-title { font-size:24px; }
@@ -102,6 +116,7 @@
     document.body.appendChild(overlay);
 
     const modal = overlay.querySelector('#standings-modal');
+    const tableScroll = overlay.querySelector('.standings-table-scroll');
     const closeBtn = overlay.querySelector('.standings-close');
     const listEl = overlay.querySelector('#standings-list');
     const subtitleEl = overlay.querySelector('#standings-subtitle');
@@ -210,8 +225,8 @@
         render();
     }));
 
-    async function waitForBadges() {
-        const badges = [...modal.querySelectorAll('.standings-badge')];
+    async function waitForBadges(root) {
+        const badges = [...root.querySelectorAll('.standings-badge')];
         await Promise.all(badges.map(img => {
             if (img.complete && img.naturalWidth > 0) return Promise.resolve();
             return new Promise(resolve => {
@@ -222,19 +237,41 @@
         }));
     }
 
+    function buildExportStage() {
+        const stage = document.createElement('div');
+        stage.className = 'standings-export-stage';
+
+        const tableClone = tableScroll.cloneNode(true);
+        tableClone.classList.add('standings-export-table');
+        stage.appendChild(tableClone);
+        document.body.appendChild(stage);
+        return stage;
+    }
+
     shotBtn.addEventListener('click', async () => {
-        if (typeof window.html2canvas !== 'function') return;
+        if (typeof window.html2canvas !== 'function' || !tableScroll) return;
         shotBtn.disabled = true;
         const originalText = shotBtn.textContent;
         shotBtn.textContent = 'Preparing…';
+        let stage = null;
         try {
-            await waitForBadges();
-            const canvas = await window.html2canvas(modal, {backgroundColor:'#111217', useCORS:true, scale:1.25});
+            await waitForBadges(tableScroll);
+            stage = buildExportStage();
+            await waitForBadges(stage);
+            const canvas = await window.html2canvas(stage, {
+                backgroundColor:'#111217',
+                useCORS:true,
+                scale:1,
+                width:1280,
+                height:720,
+                logging:false
+            });
             const link = document.createElement('a');
-            link.download = `championship-${currentView}-table.png`;
+            link.download = `championship-${currentView}-table-1280x720.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
         } finally {
+            if (stage) stage.remove();
             shotBtn.disabled = false;
             shotBtn.textContent = originalText;
         }
