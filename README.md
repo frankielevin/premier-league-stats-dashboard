@@ -40,6 +40,10 @@ You can then check `/api/health`. It should return `"api_key_configured": true`.
 - Championship standings in Overview
 - Head-to-head records
 
+## Head-to-head records
+
+The Compare view uses APIfootball's `get_H2H` endpoint. The dedicated `/api/h2h` handler normalises the provider response, removes duplicate or unplayed fixtures, sorts completed meetings newest-first, and returns the five most recent meetings for the selected clubs.
+
 ## Data-quality handling
 
 APIfootball occasionally returns duplicate match-stat keys. The importer intentionally keeps the **last valid occurrence** for a stat within a fixture. Player-level figures are only used for fields that reconcile appropriately; match-level shot figures take precedence over summed player shots.
