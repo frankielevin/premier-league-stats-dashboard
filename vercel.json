@@ -14,6 +14,10 @@
       "use": "@vercel/python"
     },
     {
+      "src": "form_fixtures.py",
+      "use": "@vercel/python"
+    },
+    {
       "src": "web.py",
       "use": "@vercel/python"
     }
@@ -29,6 +33,13 @@
     {
       "src": "/api/leaderboard",
       "dest": "leaderboard.py",
+      "headers": {
+        "Cache-Control": "public, s-maxage=900, stale-while-revalidate=21600"
+      }
+    },
+    {
+      "src": "/api/form-fixtures",
+      "dest": "form_fixtures.py",
       "headers": {
         "Cache-Control": "public, s-maxage=900, stale-while-revalidate=21600"
       }
