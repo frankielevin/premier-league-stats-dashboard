@@ -4,9 +4,41 @@
     {
       "src": "app.py",
       "use": "@vercel/python"
+    },
+    {
+      "src": "h2h.py",
+      "use": "@vercel/python"
     }
   ],
   "routes": [
+    {
+      "src": "/api/h2h",
+      "dest": "h2h.py",
+      "headers": {
+        "Cache-Control": "public, s-maxage=21600, stale-while-revalidate=86400"
+      }
+    },
+    {
+      "src": "/api/stats",
+      "dest": "app.py",
+      "headers": {
+        "Cache-Control": "public, s-maxage=900, stale-while-revalidate=21600"
+      }
+    },
+    {
+      "src": "/api/stats/(.*)",
+      "dest": "app.py",
+      "headers": {
+        "Cache-Control": "public, s-maxage=900, stale-while-revalidate=21600"
+      }
+    },
+    {
+      "src": "/api/standings",
+      "dest": "app.py",
+      "headers": {
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600"
+      }
+    },
     {
       "src": "/(.*)",
       "dest": "app.py"

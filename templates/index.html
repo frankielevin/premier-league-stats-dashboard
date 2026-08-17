@@ -3,1818 +3,537 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Premier League Stats 2025-26</title>
+    <title>Championship Stats 2026-27</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        .data-note { font-size: 11px; opacity: .65; margin-top: 8px; }
+        .api-error { grid-column: 1/-1; text-align:center; padding:48px 24px; }
+        .api-error code { display:block; margin-top:12px; opacity:.75; }
+        .compare-actions { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:20px; }
+        .simple-action-btn {
+            border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04);
+            color:inherit; border-radius:10px; padding:10px 16px; cursor:pointer; font:inherit;
+        }
+        .simple-action-btn:hover { background:rgba(255,255,255,.08); }
+        .overview-meta { opacity:.7; font-size:13px; margin-top:4px; }
+    </style>
 </head>
 <body>
-    <div class="dashboard">
-        <!-- Header -->
-        <header class="header">
-            <div class="club-info">
-                <!-- Single Team Dropdown (hidden in compare mode) -->
-                <div class="custom-dropdown" id="team-dropdown">
-                    <button class="dropdown-trigger" id="dropdown-trigger">
-                        <span class="selected-team" id="selected-team-name">West Ham United</span>
-                        <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M6 9l6 6 6-6"/>
-                        </svg>
+<div class="dashboard">
+    <header class="header">
+        <div class="club-info">
+            <div class="custom-dropdown" id="team-dropdown">
+                <button class="dropdown-trigger" id="dropdown-trigger">
+                    <span class="selected-team" id="selected-team-name">West Ham United</span>
+                    <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                </button>
+                <div class="dropdown-menu" id="dropdown-menu">
+                    <div class="dropdown-search">
+                        <input type="text" id="team-search" placeholder="Search teams..." autocomplete="off">
+                    </div>
+                    <div class="dropdown-list" id="dropdown-list">
+                        {% for key, team in teams.items() %}
+                        <div class="dropdown-item {% if key == 'west-ham' %}active{% endif %}" data-value="{{ key }}">{{ team.name }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            <span class="season-badge">2026-27 Championship</span>
+        </div>
+        <div class="header-actions">
+            <div class="last-updated">
+                <span class="update-label">Last updated</span>
+                <span class="update-time" id="last-updated">--:--</span>
+            </div>
+            <button id="refresh-btn" class="refresh-btn">
+                <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                </svg>
+                <span>Refresh</span>
+            </button>
+            <button id="screenshot-btn" class="screenshot-btn" title="Save screenshot">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <nav class="tabs">
+        <button class="tab-btn active" data-category="attacking">Attacking</button>
+        <button class="tab-btn" data-category="passing">Passing</button>
+        <button class="tab-btn" data-category="defending">Defending</button>
+        <button class="tab-btn" data-category="goalkeeping">Goalkeeping</button>
+        <button class="tab-btn" data-category="miscellaneous">Miscellaneous</button>
+        <div class="tab-divider"></div>
+        <button class="tab-btn tab-compare" data-category="compare">Compare</button>
+        <button class="tab-btn tab-overview" data-category="overview">Overview</button>
+    </nav>
+
+    <div class="loading" id="loading">
+        <div class="loading-spinner"></div>
+        <p>Fetching Championship stats...</p>
+    </div>
+
+    <main class="stats-grid" id="stats-container"></main>
+
+    <main class="compare-view hidden" id="compare-container">
+        <div class="matchup-header">
+            <div class="matchup-team team-left">
+                <div class="compare-dropdown" id="compare-dropdown-1" data-value="burnley">
+                    <button class="compare-dropdown-trigger">
+                        <span class="compare-selected-team">Burnley</span>
+                        <svg class="compare-dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
                     </button>
-                    <div class="dropdown-menu" id="dropdown-menu">
-                        <div class="dropdown-search">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="11" cy="11" r="8"/>
-                                <path d="M21 21l-4.35-4.35"/>
-                            </svg>
-                            <input type="text" id="team-search" placeholder="Search teams..." autocomplete="off">
-                        </div>
-                        <div class="dropdown-list" id="dropdown-list">
+                    <div class="compare-dropdown-menu">
+                        <div class="compare-dropdown-search"><input type="text" placeholder="Search teams..." autocomplete="off"></div>
+                        <div class="compare-dropdown-list">
                             {% for key, team in teams.items() %}
-                            <div class="dropdown-item {% if key == 'west-ham' %}active{% endif %}" data-value="{{ key }}">
-                                {{ team.name }}
-                            </div>
+                            <div class="compare-dropdown-item {% if key == 'burnley' %}active{% endif %}" data-value="{{ key }}">{{ team.name }}</div>
                             {% endfor %}
                         </div>
                     </div>
                 </div>
-                <span class="season-badge">2025-26 Premier League</span>
+                <div class="team-score" id="team1-score">0</div>
+                <div class="team-score-label">Overall Stats Won</div>
             </div>
-            <div class="header-actions">
-                <div class="last-updated">
-                    <span class="update-label">Last updated</span>
-                    <span class="update-time" id="last-updated">--:--</span>
-                </div>
-                <button id="refresh-btn" class="refresh-btn">
-                    <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
-                    </svg>
-                    <span>Refresh</span>
-                </button>
-                <button id="screenshot-btn" class="screenshot-btn" title="Save screenshot">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
-                        <circle cx="12" cy="13" r="4"/>
-                    </svg>
-                </button>
+            <div class="matchup-center">
+                <div class="vs-badge"><span class="vs-text">VS</span></div>
+                <div class="matchup-category" id="current-category-label"></div>
             </div>
-        </header>
-
-        <!-- Navigation Tabs -->
-        <nav class="tabs">
-            <button class="tab-btn active" data-category="attacking">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <path d="M12 6v6l4 2"/>
-                </svg>
-                Attacking
-            </button>
-            <button class="tab-btn" data-category="passing">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
-                </svg>
-                Passing
-            </button>
-            <button class="tab-btn" data-category="defending">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                </svg>
-                Defending
-            </button>
-            <button class="tab-btn" data-category="goalkeeping">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2"/>
-                    <path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>
-                </svg>
-                Goalkeeping
-            </button>
-            <button class="tab-btn" data-category="miscellaneous">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                </svg>
-                Miscellaneous
-            </button>
-            <div class="tab-divider"></div>
-            <button class="tab-btn tab-compare" data-category="compare">
-                Compare
-            </button>
-            <button class="tab-btn tab-overview" data-category="overview">
-                Overview
-            </button>
-        </nav>
-
-        <!-- Loading State -->
-        <div class="loading" id="loading">
-            <div class="loading-spinner"></div>
-            <p>Fetching latest stats...</p>
-        </div>
-
-        <!-- Stats Grid (Single Team View) -->
-        <main class="stats-grid" id="stats-container">
-            <!-- Stats will be loaded here -->
-        </main>
-
-        <!-- Compare View -->
-        <main class="compare-view hidden" id="compare-container">
-            <!-- Matchup Header -->
-            <div class="matchup-header">
-                <div class="matchup-team team-left">
-                    <div class="compare-dropdown" id="compare-dropdown-1" data-value="arsenal">
-                        <button class="compare-dropdown-trigger">
-                            <span class="compare-selected-team">Arsenal</span>
-                            <svg class="compare-dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M6 9l6 6 6-6"/>
-                            </svg>
-                        </button>
-                        <div class="compare-dropdown-menu">
-                            <div class="compare-dropdown-search">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="11" cy="11" r="8"/>
-                                    <path d="M21 21l-4.35-4.35"/>
-                                </svg>
-                                <input type="text" placeholder="Search teams..." autocomplete="off">
-                            </div>
-                            <div class="compare-dropdown-list">
-                                {% for key, team in teams.items() %}
-                                <div class="compare-dropdown-item {% if key == 'arsenal' %}active{% endif %}" data-value="{{ key }}">
-                                    {{ team.name }}
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="team-score" id="team1-score">0</div>
-                    <div class="team-score-label">Overall Stats Won</div>
-                </div>
-
-                <div class="matchup-center">
-                    <div class="vs-badge">
-                        <span class="vs-text">VS</span>
-                    </div>
-                    <div class="matchup-category" id="current-category-label"></div>
-                </div>
-
-                <div class="matchup-team team-right">
-                    <div class="compare-dropdown" id="compare-dropdown-2" data-value="west-ham">
-                        <button class="compare-dropdown-trigger">
-                            <span class="compare-selected-team">West Ham United</span>
-                            <svg class="compare-dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M6 9l6 6 6-6"/>
-                            </svg>
-                        </button>
-                        <div class="compare-dropdown-menu">
-                            <div class="compare-dropdown-search">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="11" cy="11" r="8"/>
-                                    <path d="M21 21l-4.35-4.35"/>
-                                </svg>
-                                <input type="text" placeholder="Search teams..." autocomplete="off">
-                            </div>
-                            <div class="compare-dropdown-list">
-                                {% for key, team in teams.items() %}
-                                <div class="compare-dropdown-item {% if key == 'west-ham' %}active{% endif %}" data-value="{{ key }}">
-                                    {{ team.name }}
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="team-score" id="team2-score">0</div>
-                    <div class="team-score-label">Overall Stats Won</div>
-                </div>
-            </div>
-
-            <!-- Category Picker -->
-            <div class="compare-picker">
-                <p class="compare-picker-label">Select a category to view comparison</p>
-                <div class="compare-tabs">
-                    <button class="compare-tab-btn" data-compare-category="attacking">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <path d="M12 6v6l4 2"/>
-                        </svg>
-                        Attacking
+            <div class="matchup-team team-right">
+                <div class="compare-dropdown" id="compare-dropdown-2" data-value="west-ham">
+                    <button class="compare-dropdown-trigger">
+                        <span class="compare-selected-team">West Ham United</span>
+                        <svg class="compare-dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
                     </button>
-                    <button class="compare-tab-btn" data-compare-category="passing">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
-                        </svg>
-                        Passing
-                    </button>
-                    <button class="compare-tab-btn" data-compare-category="defending">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                        </svg>
-                        Defending
-                    </button>
-                    <button class="compare-tab-btn" data-compare-category="goalkeeping">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="3" y="3" width="18" height="18" rx="2"/>
-                            <path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>
-                        </svg>
-                        Goalkeeping
-                    </button>
-                    <button class="compare-tab-btn" data-compare-category="miscellaneous">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                        </svg>
-                        Miscellaneous
-                    </button>
-                </div>
-            </div>
-
-            <!-- Compare action buttons -->
-            <div class="h2h-btn-wrap">
-                <button class="h2h-launch-btn" id="h2h-btn">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-                        <circle cx="9" cy="7" r="4"/>
-                        <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
-                    </svg>
-                    Head to Head Records
-                </button>
-                <button class="news-launch-btn" id="news-btn">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
-                        <path d="M12 8v4M12 16h.01"/>
-                    </svg>
-                    Team News
-                </button>
-                <button class="lineups-launch-btn" id="lineups-btn">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="3" width="18" height="18" rx="2"/>
-                        <line x1="12" y1="3" x2="12" y2="21"/>
-                        <circle cx="12" cy="12" r="3"/>
-                    </svg>
-                    Predicted Lineups
-                </button>
-            </div>
-
-            <!-- Hidden — kept for JS compatibility -->
-            <div class="compare-stats" id="compare-stats" style="display:none"></div>
-        </main>
-
-        <!-- Footer -->
-        <footer class="footer">
-            <span>Data from StatMuse</span>
-            <span class="divider">•</span>
-            <span>Premier League 2025-26</span>
-        </footer>
-    </div>
-
-    <!-- Category Stats Modal -->
-    <div class="stat-modal-overlay" id="stat-modal-overlay">
-        <div class="stat-modal" id="stat-modal">
-            <button class="modal-close-btn" id="modal-close-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <path d="M18 6L6 18M6 6l12 12"/>
-                </svg>
-            </button>
-
-            <div class="modal-matchup-header">
-                <div class="modal-team-block modal-left">
-                    <div class="modal-team-name" id="modal-team1-name"></div>
-                    <div class="modal-wins-display leading" id="modal-team1-wins">
-                        <span class="modal-wins-num" id="modal-wins-num1">0</span>
-                        <span class="modal-wins-label">stats won</span>
+                    <div class="compare-dropdown-menu">
+                        <div class="compare-dropdown-search"><input type="text" placeholder="Search teams..." autocomplete="off"></div>
+                        <div class="compare-dropdown-list">
+                            {% for key, team in teams.items() %}
+                            <div class="compare-dropdown-item {% if key == 'west-ham' %}active{% endif %}" data-value="{{ key }}">{{ team.name }}</div>
+                            {% endfor %}
+                        </div>
                     </div>
                 </div>
-                <div class="modal-center-block">
-                    <div class="modal-vs-badge">VS</div>
-                    <div class="modal-category-pill" id="modal-category-pill">ATTACKING</div>
-                </div>
-                <div class="modal-team-block modal-right">
-                    <div class="modal-team-name" id="modal-team2-name"></div>
-                    <div class="modal-wins-display" id="modal-team2-wins">
-                        <span class="modal-wins-num" id="modal-wins-num2">0</span>
-                        <span class="modal-wins-label">stats won</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="modal-stats-grid" id="modal-stats-grid">
-                <!-- Stats populated by JS -->
+                <div class="team-score" id="team2-score">0</div>
+                <div class="team-score-label">Overall Stats Won</div>
             </div>
         </div>
-        <!-- Screenshot button sits outside the modal, in the gap below -->
-        <button class="modal-screenshot-btn" id="modal-screenshot-btn" title="Save screenshot">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
-                <circle cx="12" cy="13" r="4"/>
-            </svg>
-            <span>Save Screenshot</span>
-        </button>
-    </div>
 
-    <!-- Overview Modal -->
-    <div class="stat-modal-overlay" id="overview-modal-overlay">
-        <div class="stat-modal overview-modal" id="overview-modal">
-            <button class="modal-close-btn" id="overview-close-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <path d="M18 6L6 18M6 6l12 12"/>
-                </svg>
-            </button>
-
-            <div class="overview-header">
-                <div class="overview-team-info">
-                    <div class="overview-team-name" id="overview-team-name">West Ham United</div>
-                    <div class="overview-team-meta" id="overview-team-meta"></div>
-                </div>
-                <div class="overview-pill">OVERVIEW</div>
-            </div>
-
-            <div class="overview-stats-content" id="overview-stats-content">
-                <!-- Populated by JS -->
+        <div class="compare-picker">
+            <p class="compare-picker-label">Select a category to view comparison</p>
+            <div class="compare-tabs">
+                <button class="compare-tab-btn" data-compare-category="attacking">Attacking</button>
+                <button class="compare-tab-btn" data-compare-category="passing">Passing</button>
+                <button class="compare-tab-btn" data-compare-category="defending">Defending</button>
+                <button class="compare-tab-btn" data-compare-category="goalkeeping">Goalkeeping</button>
+                <button class="compare-tab-btn" data-compare-category="miscellaneous">Miscellaneous</button>
             </div>
         </div>
-    </div>
 
-    <!-- Head to Head Modal -->
-    <div class="stat-modal-overlay" id="h2h-modal-overlay">
-        <div class="stat-modal h2h-modal" id="h2h-modal">
-            <button class="modal-close-btn" id="h2h-close-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <path d="M18 6L6 18M6 6l12 12"/>
-                </svg>
-            </button>
+        <div class="compare-actions">
+            <button class="simple-action-btn" id="h2h-btn">Head to Head Records</button>
+        </div>
+        <div class="compare-stats" id="compare-stats" style="display:none"></div>
+    </main>
 
-            <div class="h2h-header">
-                <div class="h2h-team-name" id="h2h-team1-name"></div>
-                <div class="h2h-pill">HEAD TO HEAD</div>
-                <div class="h2h-team-name h2h-right" id="h2h-team2-name"></div>
+    <footer class="footer">
+        <span>Data from APIfootball.com</span>
+        <span class="divider">•</span>
+        <span>Championship 2026-27</span>
+    </footer>
+</div>
+
+<div class="stat-modal-overlay" id="stat-modal-overlay">
+    <div class="stat-modal" id="stat-modal">
+        <button class="modal-close-btn" id="modal-close-btn">×</button>
+        <div class="modal-matchup-header">
+            <div class="modal-team-block modal-left">
+                <div class="modal-team-name" id="modal-team1-name"></div>
+                <div class="modal-wins-display" id="modal-team1-wins">
+                    <span class="modal-wins-num" id="modal-wins-num1">0</span>
+                    <span class="modal-wins-label">stats won</span>
+                </div>
             </div>
-
-            <div class="h2h-body" id="h2h-body">
-                <!-- Populated by JS -->
+            <div class="modal-center-block">
+                <div class="modal-vs-badge">VS</div>
+                <div class="modal-category-pill" id="modal-category-pill"></div>
+            </div>
+            <div class="modal-team-block modal-right">
+                <div class="modal-team-name" id="modal-team2-name"></div>
+                <div class="modal-wins-display" id="modal-team2-wins">
+                    <span class="modal-wins-num" id="modal-wins-num2">0</span>
+                    <span class="modal-wins-label">stats won</span>
+                </div>
             </div>
         </div>
+        <div class="modal-stats-grid" id="modal-stats-grid"></div>
     </div>
+    <button class="modal-screenshot-btn" id="modal-screenshot-btn">Save Screenshot</button>
+</div>
 
-    <!-- Team News Modal -->
-    <div class="stat-modal-overlay" id="news-modal-overlay">
-        <div class="stat-modal news-modal" id="news-modal">
-            <button class="modal-close-btn" id="news-close-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <path d="M18 6L6 18M6 6l12 12"/>
-                </svg>
-            </button>
-
-            <div class="news-header">
-                <div class="news-team-name" id="news-team1-name"></div>
-                <div class="news-pill">TEAM NEWS</div>
-                <div class="news-team-name news-right" id="news-team2-name"></div>
+<div class="stat-modal-overlay" id="overview-modal-overlay">
+    <div class="stat-modal overview-modal" id="overview-modal">
+        <button class="modal-close-btn" id="overview-close-btn">×</button>
+        <div class="overview-header">
+            <div class="overview-team-info">
+                <div class="overview-team-name" id="overview-team-name">West Ham United</div>
+                <div class="overview-team-meta" id="overview-team-meta"></div>
             </div>
-
-            <div class="news-body" id="news-body">
-                <!-- Populated by JS -->
-            </div>
+            <div class="overview-pill">OVERVIEW</div>
         </div>
+        <div class="overview-stats-content" id="overview-stats-content"></div>
     </div>
+</div>
 
-    <!-- Predicted Lineups Modal -->
-    <div class="stat-modal-overlay" id="lineups-modal-overlay">
-        <div class="stat-modal lineups-modal" id="lineups-modal">
-            <button class="modal-close-btn" id="lineups-close-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <path d="M18 6L6 18M6 6l12 12"/>
-                </svg>
-            </button>
-
-            <div class="lineups-header">
-                <div class="lineups-team-name" id="lineups-team1-name"></div>
-                <div class="lineups-pill">PREDICTED LINEUPS</div>
-                <div class="lineups-team-name lineups-right" id="lineups-team2-name"></div>
-            </div>
-
-            <div class="lineups-body" id="lineups-body">
-                <!-- Populated by JS -->
-            </div>
+<div class="stat-modal-overlay" id="h2h-modal-overlay">
+    <div class="stat-modal h2h-modal" id="h2h-modal">
+        <button class="modal-close-btn" id="h2h-close-btn">×</button>
+        <div class="h2h-header">
+            <div class="h2h-team-name" id="h2h-team1-name"></div>
+            <div class="h2h-pill">HEAD TO HEAD</div>
+            <div class="h2h-team-name h2h-right" id="h2h-team2-name"></div>
         </div>
+        <div class="h2h-body" id="h2h-body"></div>
     </div>
+</div>
 
-    <script>
-        const statsContainer = document.getElementById('stats-container');
-        const compareContainer = document.getElementById('compare-container');
-        const compareStats = document.getElementById('compare-stats');
-        const loading = document.getElementById('loading');
-        const refreshBtn = document.getElementById('refresh-btn');
-        const lastUpdated = document.getElementById('last-updated');
-        const tabBtns = document.querySelectorAll('.tab-btn');
-        const compareTabBtns = document.querySelectorAll('.compare-tab-btn');
+<script>
+const categories = ['attacking','passing','defending','goalkeeping','miscellaneous'];
+const lowerIsBetter = new Set(['OFF','GC','GC/M','YC','RC','FOUL','FOUL/M','PKC','POSS-L']);
+// Overall Stats Won deliberately uses one representative metric per concept.
+// Per-match versions of totals are still displayed but do not score a second point.
+const overallCompareMetrics = new Set([
+    'G','POSS%','SH','SOT%','SH-BLK','SH-IN','SH-OUT','A','OFF','WOOD',
+    'PASS','PASS%','PASS-KEY','CRS','CRS%','CNR',
+    'TKL','INT','CLR','BLK','DUEL%','AER-W',
+    'GC','SV','SV-BOX','SV-PK','CS',
+    'YC','RC','FOUL','PKC','PK-W','POSS-L','DRB%'
+]);
+const statsContainer = document.getElementById('stats-container');
+const compareContainer = document.getElementById('compare-container');
+const loading = document.getElementById('loading');
+const refreshBtn = document.getElementById('refresh-btn');
+const lastUpdated = document.getElementById('last-updated');
+const teamDropdown = document.getElementById('team-dropdown');
+const teamTrigger = document.getElementById('dropdown-trigger');
+const teamSearch = document.getElementById('team-search');
+const teamItems = [...document.querySelectorAll('.dropdown-item')];
+const selectedTeam = document.getElementById('selected-team-name');
+const compare1 = document.getElementById('compare-dropdown-1');
+const compare2 = document.getElementById('compare-dropdown-2');
 
-        // Custom dropdown elements
-        const dropdown = document.getElementById('team-dropdown');
-        const dropdownTrigger = document.getElementById('dropdown-trigger');
-        const dropdownMenu = document.getElementById('dropdown-menu');
-        const dropdownList = document.getElementById('dropdown-list');
-        const selectedTeamName = document.getElementById('selected-team-name');
-        const teamSearch = document.getElementById('team-search');
-        const dropdownItems = document.querySelectorAll('.dropdown-item');
+let currentTeam = 'west-ham';
+let currentCategory = 'attacking';
+let compareMode = false;
+let allStats = {};
+let compareStats1 = {};
+let compareStats2 = {};
 
-        // Compare custom dropdowns
-        const compareDropdown1 = document.getElementById('compare-dropdown-1');
-        const compareDropdown2 = document.getElementById('compare-dropdown-2');
+function parseValue(v) {
+    if (v === undefined || v === null || v === '-') return null;
+    const n = parseFloat(String(v).replace(/,/g,'').replace('%',''));
+    return Number.isFinite(n) ? n : null;
+}
+function rankNumber(rank) {
+    if (!rank || rank === '-') return null;
+    const n = parseInt(String(rank).replace(/\D/g,''));
+    return Number.isFinite(n) ? n : null;
+}
+function rankClass(rank) {
+    const n = rankNumber(rank);
+    if (n === null) return 'rank-none';
+    if (n <= 6) return 'rank-excellent';
+    if (n <= 12) return 'rank-good';
+    if (n <= 18) return 'rank-average';
+    return 'rank-poor';
+}
+function rankLabel(rank) {
+    const n = rankNumber(rank);
+    if (n === null) return '';
+    if (n <= 6) return 'Excellent';
+    if (n <= 12) return 'Good';
+    if (n <= 18) return 'Average';
+    return 'Below Avg';
+}
+function rankPercentage(rank) {
+    const n = rankNumber(rank);
+    if (n === null) return 0;
+    return Math.max(5, 100 - ((n - 1) / 23) * 95);
+}
+function setLoading(on) {
+    loading.style.display = on ? 'flex' : 'none';
+    statsContainer.style.opacity = on ? '0' : '1';
+    compareContainer.style.opacity = on ? '0' : '1';
+    refreshBtn.disabled = on;
+}
+function updateTime() {
+    lastUpdated.textContent = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+}
+function errorHtml(message) {
+    return `<div class="api-error"><h3>Unable to load stats</h3><p>${message || 'Please try again.'}</p></div>`;
+}
 
-        let allStats = {};
-        let compareStats1 = {};
-        let compareStats2 = {};
-        let currentCategory = 'attacking';
-        let currentCompareCategory = 'attacking';
-        let currentTeam = 'west-ham';
-        let isCompareMode = false;
+teamTrigger.addEventListener('click', e => {
+    e.stopPropagation();
+    teamDropdown.classList.toggle('open');
+    if (teamDropdown.classList.contains('open')) teamSearch.focus();
+});
+document.addEventListener('click', e => {
+    if (!teamDropdown.contains(e.target)) teamDropdown.classList.remove('open');
+    if (!e.target.closest('.compare-dropdown')) document.querySelectorAll('.compare-dropdown.open').forEach(d=>d.classList.remove('open'));
+});
+teamSearch.addEventListener('input', e => {
+    const q = e.target.value.toLowerCase();
+    teamItems.forEach(i => i.style.display = i.textContent.toLowerCase().includes(q) ? 'block' : 'none');
+});
+teamItems.forEach(item => item.addEventListener('click', () => {
+    currentTeam = item.dataset.value;
+    selectedTeam.textContent = item.textContent.trim();
+    teamItems.forEach(i=>i.classList.remove('active'));
+    item.classList.add('active');
+    teamDropdown.classList.remove('open');
+    fetchTeamStats();
+}));
 
-        // Stats where StatMuse ranks by highest raw value first (rank 1 = most = worst for these stats)
-        // Only these need the colour mapping inverted. Other lower-is-better stats (GC, YC, etc.)
-        // are already ranked by StatMuse with rank 1 = best (fewest), so no inversion needed.
-        // ERR-SH excluded: StatMuse ranks it ascending (rank 1 = fewest errors = best).
-        const INVERTED_STATS = ['xGA', 'ERR-G', 'PKC', 'OG', 'AER-L', 'DUEL-L', 'POSS-L'];
+function initCompareDropdown(el) {
+    const trigger = el.querySelector('.compare-dropdown-trigger');
+    const input = el.querySelector('input');
+    const items = [...el.querySelectorAll('.compare-dropdown-item')];
+    const label = el.querySelector('.compare-selected-team');
+    trigger.addEventListener('click', e => {
+        e.stopPropagation();
+        document.querySelectorAll('.compare-dropdown.open').forEach(d=>{if(d!==el)d.classList.remove('open')});
+        el.classList.toggle('open');
+        if(el.classList.contains('open')) input.focus();
+    });
+    input.addEventListener('input', e => {
+        const q=e.target.value.toLowerCase();
+        items.forEach(i=>i.style.display=i.textContent.toLowerCase().includes(q)?'block':'none');
+    });
+    items.forEach(item=>item.addEventListener('click',()=>{
+        el.dataset.value=item.dataset.value;
+        label.textContent=item.textContent.trim();
+        items.forEach(i=>i.classList.remove('active'));
+        item.classList.add('active');
+        el.classList.remove('open');
+        fetchCompareStats();
+    }));
+}
+initCompareDropdown(compare1);
+initCompareDropdown(compare2);
 
-        // Stats where LOWER raw value is better — used by compare mode to decide the winner
-        const LOWER_IS_BETTER = ['OFF', 'xGA', 'TKL-LM', 'ERR-SH', 'ERR-G', 'PKC', 'OG', 'GC', 'GC/M', 'YC', 'RC', 'FOUL', 'AER-L', 'DUEL-L', 'POSS-L'];
+document.querySelectorAll('.tab-btn').forEach(btn=>btn.addEventListener('click',()=>{
+    const category=btn.dataset.category;
+    if(category==='overview'){ openOverview(); return; }
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    if(category==='compare'){
+        compareMode=true;
+        statsContainer.classList.add('hidden');
+        compareContainer.classList.remove('hidden');
+        teamDropdown.classList.add('hidden');
+        fetchCompareStats();
+    } else {
+        compareMode=false;
+        currentCategory=category;
+        statsContainer.classList.remove('hidden');
+        compareContainer.classList.add('hidden');
+        teamDropdown.classList.remove('hidden');
+        displayStats(category);
+    }
+}));
 
-        // Custom dropdown functionality
-        dropdownTrigger.addEventListener('click', (e) => {
-            e.stopPropagation();
-            dropdown.classList.toggle('open');
-            if (dropdown.classList.contains('open')) {
-                teamSearch.focus();
-                teamSearch.value = '';
-                filterTeams('');
-            }
+document.querySelectorAll('.compare-tab-btn').forEach(btn=>btn.addEventListener('click',()=>{
+    openCompareModal(btn.dataset.compareCategory);
+}));
+
+async function fetchJson(url) {
+    const r = await fetch(url);
+    const data = await r.json();
+    if(!r.ok || data.error) throw new Error(data.error || `Request failed (${r.status})`);
+    return data;
+}
+async function fetchTeamStats() {
+    setLoading(true);
+    try {
+        const data=await fetchJson(`/api/stats?team=${encodeURIComponent(currentTeam)}`);
+        allStats=Object.fromEntries(categories.map(c=>[c,data[c]]));
+        displayStats(currentCategory);
+        updateTime();
+    } catch(err) {
+        statsContainer.innerHTML=errorHtml(err.message);
+    } finally { setLoading(false); }
+}
+function displayStats(category) {
+    const data=allStats[category];
+    if(!data?.success){statsContainer.innerHTML=errorHtml('No data available.');return;}
+    const stats=data.stats.filter(s=>s.abbrev!=='M');
+    statsContainer.innerHTML=stats.map((s,i)=>{
+        const pct=rankPercentage(s.rank);
+        return `<div class="stat-card ${rankClass(s.rank)} animate-in" style="animation-delay:${i*.03}s">
+            <div class="stat-header"><span class="stat-abbrev">${s.abbrev}</span>${s.rank!=='-'?`<span class="rank-badge">${s.rank}</span>`:''}</div>
+            <div class="stat-value">${s.club}</div>
+            <div class="stat-name">${s.name}</div>
+            ${s.rank!=='-'?`<div class="rank-bar-container"><div class="rank-bar" style="width:${pct}%"></div></div><div class="rank-label">${rankLabel(s.rank)}</div>`:'<div class="rank-label no-rank">No ranking</div>'}
+        </div>`;
+    }).join('');
+}
+
+async function fetchCompareStats() {
+    setLoading(true);
+    try {
+        const t1=compare1.dataset.value, t2=compare2.dataset.value;
+        const [a,b]=await Promise.all([fetchJson(`/api/stats?team=${t1}`),fetchJson(`/api/stats?team=${t2}`)]);
+        compareStats1=Object.fromEntries(categories.map(c=>[c,a[c]]));
+        compareStats2=Object.fromEntries(categories.map(c=>[c,b[c]]));
+        const totals=calculateOverallWins();
+        document.getElementById('team1-score').textContent=totals.a;
+        document.getElementById('team2-score').textContent=totals.b;
+        updateTime();
+    } catch(err) {
+        document.getElementById('compare-stats').innerHTML=errorHtml(err.message);
+    } finally { setLoading(false); }
+}
+function winnerFor(abbrev,v1,v2){
+    if(v1===null||v2===null||v1===v2)return 'draw';
+    if(lowerIsBetter.has(abbrev))return v1<v2?'a':'b';
+    return v1>v2?'a':'b';
+}
+function calculateOverallWins(){
+    let a=0,b=0;
+    categories.forEach(cat=>{
+        const s1=compareStats1[cat]?.stats||[], s2=compareStats2[cat]?.stats||[];
+        s1.filter(s=>overallCompareMetrics.has(s.abbrev)).forEach(x=>{
+            const y=s2.find(z=>z.abbrev===x.abbrev); if(!y)return;
+            const w=winnerFor(x.abbrev,parseValue(x.club),parseValue(y.club));
+            if(w==='a')a++; if(w==='b')b++;
         });
+    });
+    return {a,b};
+}
 
-        document.addEventListener('click', (e) => {
-            if (!dropdown.contains(e.target)) {
-                dropdown.classList.remove('open');
-            }
-        });
-
-        teamSearch.addEventListener('input', (e) => {
-            filterTeams(e.target.value.toLowerCase());
-        });
-
-        function filterTeams(query) {
-            dropdownItems.forEach(item => {
-                const teamName = item.textContent.toLowerCase();
-                item.style.display = teamName.includes(query) ? 'block' : 'none';
-            });
+const statModal=document.getElementById('stat-modal-overlay');
+function openCompareModal(category){
+    const d1=compareStats1[category], d2=compareStats2[category];
+    if(!d1?.success||!d2?.success)return;
+    const name1=compare1.querySelector('.compare-selected-team').textContent.trim();
+    const name2=compare2.querySelector('.compare-selected-team').textContent.trim();
+    document.getElementById('modal-team1-name').textContent=name1;
+    document.getElementById('modal-team2-name').textContent=name2;
+    document.getElementById('modal-category-pill').textContent=category.toUpperCase();
+    const s1=d1.stats.filter(s=>s.abbrev!=='M'), s2=d2.stats.filter(s=>s.abbrev!=='M');
+    let aw=0,bw=0;
+    document.getElementById('modal-stats-grid').innerHTML=s1.map(x=>{
+        const y=s2.find(z=>z.abbrev===x.abbrev)||{club:'-',rank:'-'};
+        const w=winnerFor(x.abbrev,parseValue(x.club),parseValue(y.club));
+        if(overallCompareMetrics.has(x.abbrev)){
+            if(w==='a')aw++;
+            if(w==='b')bw++;
         }
-
-        dropdownItems.forEach(item => {
-            item.addEventListener('click', () => {
-                const teamKey = item.dataset.value;
-                const teamName = item.textContent.trim();
-                dropdownItems.forEach(i => i.classList.remove('active'));
-                item.classList.add('active');
-                selectedTeamName.textContent = teamName;
-                currentTeam = teamKey;
-                dropdown.classList.remove('open');
-                fetchAllStats();
-            });
-        });
-
-        teamSearch.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') dropdown.classList.remove('open');
-        });
-
-        // Tab switching
-        tabBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const category = btn.dataset.category;
-
-                if (category === 'overview') {
-                    openOverviewModal();
-                    return;
-                }
-
-                tabBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-
-                if (category === 'compare') {
-                    isCompareMode = true;
-                    statsContainer.classList.add('hidden');
-                    compareContainer.classList.remove('hidden');
-                    dropdown.classList.add('hidden');
-                    fetchCompareStats();
-                } else {
-                    isCompareMode = false;
-                    currentCategory = category;
-                    statsContainer.classList.remove('hidden');
-                    compareContainer.classList.add('hidden');
-                    dropdown.classList.remove('hidden');
-                    displayStats(currentCategory);
-                }
-            });
-        });
-
-        // Compare category tabs — open modal only
-        compareTabBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                compareTabBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                currentCompareCategory = btn.dataset.compareCategory;
-                openCategoryModal(currentCompareCategory);
-            });
-        });
-
-        // Compare custom dropdown functionality
-        function initCompareDropdown(dropdown) {
-            const trigger = dropdown.querySelector('.compare-dropdown-trigger');
-            const menu = dropdown.querySelector('.compare-dropdown-menu');
-            const searchInput = dropdown.querySelector('.compare-dropdown-search input');
-            const items = dropdown.querySelectorAll('.compare-dropdown-item');
-            const selectedText = dropdown.querySelector('.compare-selected-team');
-
-            trigger.addEventListener('click', (e) => {
-                e.stopPropagation();
-                // Close other dropdown and reset z-index
-                document.querySelectorAll('.compare-dropdown.open').forEach(d => {
-                    if (d !== dropdown) {
-                        d.classList.remove('open');
-                        d.closest('.matchup-team').classList.remove('dropdown-active');
-                    }
-                });
-                dropdown.classList.toggle('open');
-                dropdown.closest('.matchup-team').classList.toggle('dropdown-active', dropdown.classList.contains('open'));
-                if (dropdown.classList.contains('open')) {
-                    searchInput.focus();
-                    searchInput.value = '';
-                    items.forEach(item => item.style.display = 'block');
-                }
-            });
-
-            searchInput.addEventListener('input', (e) => {
-                const query = e.target.value.toLowerCase();
-                items.forEach(item => {
-                    const teamName = item.textContent.toLowerCase();
-                    item.style.display = teamName.includes(query) ? 'block' : 'none';
-                });
-            });
-
-            searchInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') dropdown.classList.remove('open');
-            });
-
-            items.forEach(item => {
-                item.addEventListener('click', () => {
-                    const teamKey = item.dataset.value;
-                    const teamName = item.textContent.trim();
-                    items.forEach(i => i.classList.remove('active'));
-                    item.classList.add('active');
-                    selectedText.textContent = teamName;
-                    dropdown.dataset.value = teamKey;
-                    dropdown.classList.remove('open');
-                    dropdown.closest('.matchup-team').classList.remove('dropdown-active');
-                    fetchCompareStats();
-                });
-            });
-        }
-
-        initCompareDropdown(compareDropdown1);
-        initCompareDropdown(compareDropdown2);
-
-        // Close dropdowns when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.compare-dropdown')) {
-                document.querySelectorAll('.compare-dropdown.open').forEach(d => {
-                    d.classList.remove('open');
-                    d.closest('.matchup-team').classList.remove('dropdown-active');
-                });
-            }
-        });
-
-        // Refresh button
-        refreshBtn.addEventListener('click', () => {
-            if (isCompareMode) {
-                fetchCompareStats();
-            } else {
-                fetchAllStats();
-            }
-        });
-
-        function showLoading() {
-            loading.style.display = 'flex';
-            statsContainer.style.opacity = '0';
-            compareContainer.style.opacity = '0';
-            refreshBtn.style.display = 'none';
-        }
-
-        function hideLoading() {
-            loading.style.display = 'none';
-            statsContainer.style.opacity = '1';
-            compareContainer.style.opacity = '1';
-            refreshBtn.style.display = '';
-        }
-
-        function isInvertedStat(abbrev) {
-            return INVERTED_STATS.includes(abbrev);
-        }
-
-        function isLowerBetter(abbrev) {
-            return LOWER_IS_BETTER.includes(abbrev);
-        }
-
-        function getRankNumber(rank) {
-            if (!rank || rank === '-') return null;
-            return parseInt(rank.replace(/\D/g, ''));
-        }
-
-        function getRankClass(rank, inverted = false) {
-            const num = getRankNumber(rank);
-            if (num === null) return 'rank-none';
-            if (inverted) {
-                if (num <= 5) return 'rank-poor';
-                if (num <= 10) return 'rank-average';
-                if (num <= 15) return 'rank-good';
-                return 'rank-excellent';
-            } else {
-                if (num <= 5) return 'rank-excellent';
-                if (num <= 10) return 'rank-good';
-                if (num <= 15) return 'rank-average';
-                return 'rank-poor';
-            }
-        }
-
-        function getRankLabel(rank, inverted = false) {
-            const num = getRankNumber(rank);
-            if (num === null) return '';
-            if (inverted) {
-                if (num <= 5) return 'Poor';
-                if (num <= 10) return 'Below Avg';
-                if (num <= 15) return 'Good';
-                return 'Excellent';
-            } else {
-                if (num <= 5) return 'Excellent';
-                if (num <= 10) return 'Good';
-                if (num <= 15) return 'Average';
-                return 'Below Avg';
-            }
-        }
-
-        function getRankPercentage(rank, inverted = false) {
-            const num = getRankNumber(rank);
-            if (num === null) return 0;
-            if (inverted) {
-                return Math.max(5, (num - 1) * 5 + 5);
-            } else {
-                return Math.max(5, 100 - ((num - 1) * 5));
-            }
-        }
-
-        function parseStatValue(value) {
-            if (!value || value === '-') return null;
-            const cleaned = value.replace(/,/g, '').replace('%', '');
-            return parseFloat(cleaned);
-        }
-
-        function displayStats(category) {
-            const data = allStats[category];
-            if (!data || !data.success || data.stats.length === 0) {
-                statsContainer.innerHTML = `
-                    <div class="error-state">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <path d="M12 8v4M12 16h.01"/>
-                        </svg>
-                        <p>Unable to load ${category} stats</p>
-                    </div>
-                `;
-                return;
-            }
-
-            const statsToShow = data.stats.filter(s => s.abbrev !== 'M');
-            let html = '';
-
-            statsToShow.forEach((stat, index) => {
-                const inverted = isInvertedStat(stat.abbrev);
-                const rankClass = getRankClass(stat.rank, inverted);
-                const rankPct = getRankPercentage(stat.rank, inverted);
-                const rankLabel = getRankLabel(stat.rank, inverted);
-
-                html += `
-                    <div class="stat-card ${rankClass}" style="animation-delay: ${index * 0.03}s">
-                        <div class="stat-header">
-                            <span class="stat-abbrev">${stat.abbrev}</span>
-                            ${stat.rank !== '-' ? `<span class="rank-badge">${stat.rank}</span>` : ''}
-                        </div>
-                        <div class="stat-value">${stat.club}</div>
-                        <div class="stat-name">${stat.name}</div>
-                        ${stat.rank !== '-' ? `
-                            <div class="rank-bar-container">
-                                <div class="rank-bar" style="width: ${rankPct}%"></div>
-                                <div class="rank-positions">
-                                    <span class="pos-marker" style="left: ${rankPct}%">
-                                        <span class="pos-dot"></span>
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="rank-label">${rankLabel}</div>
-                        ` : '<div class="rank-label no-rank">No ranking</div>'}
-                    </div>
-                `;
-            });
-
-            statsContainer.innerHTML = html;
-            requestAnimationFrame(() => {
-                statsContainer.querySelectorAll('.stat-card').forEach(card => {
-                    card.classList.add('animate-in');
-                });
-            });
-        }
-
-        function displayComparison() {
-            const data1 = compareStats1[currentCompareCategory];
-            const data2 = compareStats2[currentCompareCategory];
-            const categoryLabel = document.getElementById('current-category-label');
-            const team1ScoreEl = document.getElementById('team1-score');
-            const team2ScoreEl = document.getElementById('team2-score');
-
-            // Update category label
-            categoryLabel.textContent = currentCompareCategory.toUpperCase();
-
-            if (!data1?.success || !data2?.success) {
-                compareStats.innerHTML = `
-                    <div class="error-state">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <path d="M12 8v4M12 16h.01"/>
-                        </svg>
-                        <p>Unable to load comparison data</p>
-                    </div>
-                `;
-                return;
-            }
-
-            const stats1 = data1.stats.filter(s => s.abbrev !== 'M');
-            const stats2 = data2.stats.filter(s => s.abbrev !== 'M');
-
-            let html = '';
-            let team1Wins = 0;
-            let team2Wins = 0;
-
-            stats1.forEach((stat1, index) => {
-                const stat2 = stats2.find(s => s.abbrev === stat1.abbrev) || { club: '-', rank: '-' };
-                const val1 = parseStatValue(stat1.club);
-                const val2 = parseStatValue(stat2.club);
-                const lowerBetter = isLowerBetter(stat1.abbrev);
-
-                let winner = 'draw';
-                if (val1 !== null && val2 !== null && val1 !== val2) {
-                    if (lowerBetter) {
-                        winner = val1 < val2 ? 'team1' : 'team2';
-                    } else {
-                        winner = val1 > val2 ? 'team1' : 'team2';
-                    }
-                }
-
-                // Count wins
-                if (winner === 'team1') team1Wins++;
-                if (winner === 'team2') team2Wins++;
-
-                // Calculate bar percentages
-                let bar1Pct = 50, bar2Pct = 50;
-                if (val1 !== null && val2 !== null && (val1 + val2) > 0) {
-                    const total = Math.abs(val1) + Math.abs(val2);
-                    bar1Pct = (Math.abs(val1) / total) * 100;
-                    bar2Pct = (Math.abs(val2) / total) * 100;
-                }
-
-                const team1Class = winner === 'team1' ? 'winner' : (winner === 'team2' ? 'loser' : 'draw');
-                const team2Class = winner === 'team2' ? 'winner' : (winner === 'team1' ? 'loser' : 'draw');
-
-                // Trophy icon for winner
-                const trophyIcon = `<svg class="winner-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C13.1 2 14 2.9 14 4V5H19C19.55 5 20 5.45 20 6V9C20 11.21 18.21 13 16 13H15.83C15.42 14.17 14.31 15 13 15V17H14C15.1 17 16 17.9 16 19V21H8V19C8 17.9 8.9 17 10 17H11V15C9.69 15 8.58 14.17 8.17 13H8C5.79 13 4 11.21 4 9V6C4 5.45 4.45 5 5 5H10V4C10 2.9 10.9 2 12 2M6 7V9C6 10.1 6.9 11 8 11V7H6M16 11C17.1 11 18 10.1 18 9V7H16V11Z"/></svg>`;
-
-                html += `
-                    <div class="compare-row ${team1Class === 'winner' || team2Class === 'winner' ? 'has-winner' : ''}" style="--delay: ${index * 0.05}s">
-                        <div class="stat-cell team1 ${team1Class}">
-                            <div class="stat-value-wrap">
-                                ${winner === 'team1' ? trophyIcon : ''}
-                                <span class="stat-main-value">${stat1.club}</span>
-                            </div>
-                            <span class="stat-rank">${stat1.rank !== '-' ? stat1.rank : ''}</span>
-                        </div>
-
-                        <div class="stat-center">
-                            <div class="stat-label">
-                                <span class="stat-abbrev">${stat1.abbrev}</span>
-                                <span class="stat-name">${stat1.name}</span>
-                            </div>
-                            <div class="comparison-bar">
-                                <div class="bar-left ${team1Class}" style="--width: ${bar1Pct}%"></div>
-                                <div class="bar-right ${team2Class}" style="--width: ${bar2Pct}%"></div>
-                            </div>
-                        </div>
-
-                        <div class="stat-cell team2 ${team2Class}">
-                            <div class="stat-value-wrap">
-                                <span class="stat-main-value">${stat2.club}</span>
-                                ${winner === 'team2' ? trophyIcon : ''}
-                            </div>
-                            <span class="stat-rank">${stat2.rank !== '-' ? stat2.rank : ''}</span>
-                        </div>
-                    </div>
-                `;
-            });
-
-            // Update score counters with animation
-            animateScore(team1ScoreEl, team1Wins);
-            animateScore(team2ScoreEl, team2Wins);
-
-            // Add winner glow to leading team
-            team1ScoreEl.parentElement.classList.toggle('leading', team1Wins > team2Wins);
-            team2ScoreEl.parentElement.classList.toggle('leading', team2Wins > team1Wins);
-
-            compareStats.innerHTML = html;
-
-            // Trigger animations
-            requestAnimationFrame(() => {
-                compareStats.querySelectorAll('.compare-row').forEach((row, i) => {
-                    setTimeout(() => {
-                        row.classList.add('animate-in');
-                    }, i * 50);
-                });
-            });
-        }
-
-        function animateScore(element, targetValue) {
-            const currentValue = parseInt(element.textContent) || 0;
-            const duration = 500;
-            const startTime = performance.now();
-
-            function update(currentTime) {
-                const elapsed = currentTime - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                const easeProgress = 1 - Math.pow(1 - progress, 3);
-                const value = Math.round(currentValue + (targetValue - currentValue) * easeProgress);
-                element.textContent = value;
-
-                if (progress < 1) {
-                    requestAnimationFrame(update);
-                }
-            }
-
-            requestAnimationFrame(update);
-        }
-
-        async function fetchAllStats() {
-            showLoading();
-            refreshBtn.disabled = true;
-            refreshBtn.classList.add('loading');
-
-            try {
-                const response = await fetch(`/api/stats?team=${currentTeam}`);
-                const data = await response.json();
-                allStats = {
-                    attacking: data.attacking,
-                    passing: data.passing,
-                    defending: data.defending,
-                    goalkeeping: data.goalkeeping,
-                    miscellaneous: data.miscellaneous
-                };
-                displayStats(currentCategory);
-                updateLastUpdated();
-            } catch (error) {
-                statsContainer.innerHTML = `
-                    <div class="error-state">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <path d="M12 8v4M12 16h.01"/>
-                        </svg>
-                        <p>Connection error. Please try again.</p>
-                    </div>
-                `;
-            } finally {
-                hideLoading();
-                refreshBtn.disabled = false;
-                refreshBtn.classList.remove('loading');
-            }
-        }
-
-        function calculateTotalWins() {
-            const categories = ['attacking', 'passing', 'defending', 'goalkeeping', 'miscellaneous'];
-            let team1Total = 0;
-            let team2Total = 0;
-
-            categories.forEach(category => {
-                const data1 = compareStats1[category];
-                const data2 = compareStats2[category];
-                if (!data1?.success || !data2?.success) return;
-
-                const stats1 = data1.stats.filter(s => s.abbrev !== 'M');
-                const stats2 = data2.stats.filter(s => s.abbrev !== 'M');
-
-                stats1.forEach(stat1 => {
-                    const stat2 = stats2.find(s => s.abbrev === stat1.abbrev) || { club: '-' };
-                    const val1 = parseStatValue(stat1.club);
-                    const val2 = parseStatValue(stat2.club);
-                    const lowerBetter = isLowerBetter(stat1.abbrev);
-
-                    if (val1 !== null && val2 !== null && val1 !== val2) {
-                        if (lowerBetter ? val1 < val2 : val1 > val2) {
-                            team1Total++;
-                        } else {
-                            team2Total++;
-                        }
-                    }
-                });
-            });
-
-            return { team1Total, team2Total };
-        }
-
-        function updateHeaderScores() {
-            const { team1Total, team2Total } = calculateTotalWins();
-            const team1ScoreEl = document.getElementById('team1-score');
-            const team2ScoreEl = document.getElementById('team2-score');
-            animateScore(team1ScoreEl, team1Total);
-            animateScore(team2ScoreEl, team2Total);
-            team1ScoreEl.parentElement.classList.toggle('leading', team1Total > team2Total);
-            team2ScoreEl.parentElement.classList.toggle('leading', team2Total > team1Total);
-        }
-
-        async function fetchCompareStats() {
-            showLoading();
-            refreshBtn.disabled = true;
-            refreshBtn.classList.add('loading');
-
-            const team1 = compareDropdown1.dataset.value;
-            const team2 = compareDropdown2.dataset.value;
-
-            try {
-                const [res1, res2] = await Promise.all([
-                    fetch(`/api/stats?team=${team1}`),
-                    fetch(`/api/stats?team=${team2}`)
-                ]);
-
-                const data1 = await res1.json();
-                const data2 = await res2.json();
-
-                compareStats1 = {
-                    attacking: data1.attacking,
-                    passing: data1.passing,
-                    defending: data1.defending,
-                    goalkeeping: data1.goalkeeping,
-                    miscellaneous: data1.miscellaneous
-                };
-
-                compareStats2 = {
-                    attacking: data2.attacking,
-                    passing: data2.passing,
-                    defending: data2.defending,
-                    goalkeeping: data2.goalkeeping,
-                    miscellaneous: data2.miscellaneous
-                };
-
-                updateHeaderScores();
-                updateLastUpdated();
-            } catch (error) {
-                compareStats.innerHTML = `
-                    <div class="error-state">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <path d="M12 8v4M12 16h.01"/>
-                        </svg>
-                        <p>Connection error. Please try again.</p>
-                    </div>
-                `;
-            } finally {
-                hideLoading();
-                refreshBtn.disabled = false;
-                refreshBtn.classList.remove('loading');
-            }
-        }
-
-        function updateLastUpdated() {
-            const now = new Date();
-            lastUpdated.textContent = now.toLocaleTimeString('en-GB', {
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-        }
-
-        // ============================================
-        //  Category Stats Modal
-        // ============================================
-
-        const statModalOverlay = document.getElementById('stat-modal-overlay');
-        const modalCloseBtn = document.getElementById('modal-close-btn');
-        const modalTeam1Name = document.getElementById('modal-team1-name');
-        const modalTeam2Name = document.getElementById('modal-team2-name');
-        const modalWinsNum1 = document.getElementById('modal-wins-num1');
-        const modalWinsNum2 = document.getElementById('modal-wins-num2');
-        const modalTeam1Wins = document.getElementById('modal-team1-wins');
-        const modalTeam2Wins = document.getElementById('modal-team2-wins');
-        const modalCategoryPill = document.getElementById('modal-category-pill');
-        const modalStatsGrid = document.getElementById('modal-stats-grid');
-
-        function openCategoryModal(category) {
-            const data1 = compareStats1[category];
-            const data2 = compareStats2[category];
-            if (!data1?.success || !data2?.success) return;
-
-            // Team names
-            const t1Name = compareDropdown1.querySelector('.compare-selected-team').textContent.trim();
-            const t2Name = compareDropdown2.querySelector('.compare-selected-team').textContent.trim();
-            modalTeam1Name.textContent = t1Name;
-            modalTeam2Name.textContent = t2Name;
-            modalCategoryPill.textContent = category.toUpperCase();
-
-            // Update the VS header label now that a category is chosen
-            document.getElementById('current-category-label').textContent = category.toUpperCase();
-
-            // Build content
-            const { html, team1Wins, team2Wins } = buildModalContent(category, data1, data2);
-            modalStatsGrid.innerHTML = html;
-
-            // Update modal win counts
-            modalWinsNum1.textContent = team1Wins;
-            modalWinsNum2.textContent = team2Wins;
-            modalTeam1Wins.classList.toggle('leading', team1Wins > team2Wins);
-            modalTeam2Wins.classList.toggle('leading', team2Wins > team1Wins);
-            modalTeam1Wins.classList.toggle('trailing', team1Wins < team2Wins);
-            modalTeam2Wins.classList.toggle('trailing', team2Wins < team1Wins);
-
-
-            // Open modal
-            statModalOverlay.classList.add('open');
-            document.body.style.overflow = 'hidden';
-
-            // Stagger animate cards
-            requestAnimationFrame(() => {
-                modalStatsGrid.querySelectorAll('.modal-stat-item').forEach((el, i) => {
-                    setTimeout(() => el.classList.add('animate-in'), i * 30);
-                });
-            });
-        }
-
-        function buildModalContent(category, data1, data2) {
-            const stats1 = data1.stats.filter(s => s.abbrev !== 'M');
-            const stats2 = data2.stats.filter(s => s.abbrev !== 'M');
-            let html = '';
-            let team1Wins = 0;
-            let team2Wins = 0;
-
-            stats1.forEach((stat1) => {
-                const stat2 = stats2.find(s => s.abbrev === stat1.abbrev) || { club: '-', rank: '-' };
-                const val1 = parseStatValue(stat1.club);
-                const val2 = parseStatValue(stat2.club);
-                const lowerBetter = isLowerBetter(stat1.abbrev);
-
-                let winner = 'draw';
-                if (val1 !== null && val2 !== null && val1 !== val2) {
-                    winner = lowerBetter ? (val1 < val2 ? 'team1' : 'team2') : (val1 > val2 ? 'team1' : 'team2');
-                }
-
-                if (winner === 'team1') team1Wins++;
-                if (winner === 'team2') team2Wins++;
-
-                let bar1Pct = 50, bar2Pct = 50;
-                if (val1 !== null && val2 !== null && (Math.abs(val1) + Math.abs(val2)) > 0) {
-                    const total = Math.abs(val1) + Math.abs(val2);
-                    bar1Pct = (Math.abs(val1) / total) * 100;
-                    bar2Pct = (Math.abs(val2) / total) * 100;
-                }
-
-                const c1 = winner === 'team1' ? 'winner' : (winner === 'team2' ? 'loser' : 'draw');
-                const c2 = winner === 'team2' ? 'winner' : (winner === 'team1' ? 'loser' : 'draw');
-
-                html += `
-                    <div class="modal-stat-item">
-                        <div class="modal-val-cell left ${c1}">
-                            <div class="modal-val-inner">
-                                <span class="modal-main-val">${stat1.club}</span>
-                                ${stat1.rank !== '-' ? `<span class="modal-rank-pill">${stat1.rank}</span>` : ''}
-                            </div>
-                        </div>
-                        <div class="modal-stat-info">
-                            <span class="modal-abbrev">${stat1.abbrev}</span>
-                            <span class="modal-stat-name-text">${stat1.name}</span>
-                            <div class="modal-bar">
-                                <div class="modal-bar-left ${c1}" style="width: ${bar1Pct}%"></div>
-                                <div class="modal-bar-right ${c2}" style="width: ${bar2Pct}%"></div>
-                            </div>
-                        </div>
-                        <div class="modal-val-cell right ${c2}">
-                            <div class="modal-val-inner">
-                                <span class="modal-main-val">${stat2.club}</span>
-                                ${stat2.rank !== '-' ? `<span class="modal-rank-pill">${stat2.rank}</span>` : ''}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-
-            return { html, team1Wins, team2Wins };
-        }
-
-        function closeModal() {
-            statModalOverlay.classList.remove('open');
-            document.body.style.overflow = '';
-        }
-
-        modalCloseBtn.addEventListener('click', closeModal);
-        statModalOverlay.addEventListener('click', (e) => {
-            if (e.target === statModalOverlay) closeModal();
-        });
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && statModalOverlay.classList.contains('open')) closeModal();
-        });
-
-        // ============================================
-        // Screenshot — exports 1280×720 PNG
-        // ============================================
-        async function captureElement(element, filename) {
-            const allScreenshotBtns = document.querySelectorAll('.screenshot-btn, .modal-screenshot-btn');
-            allScreenshotBtns.forEach(b => b.style.visibility = 'hidden');
-
-            try {
-                const canvas = await html2canvas(element, {
-                    backgroundColor: '#0F0F13',
-                    useCORS: true,
-                    allowTaint: true,
-                    logging: false,
-                    scale: window.devicePixelRatio || 1
-                });
-
-                const link = document.createElement('a');
-                link.download = filename;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-            } finally {
-                allScreenshotBtns.forEach(b => b.style.visibility = '');
-            }
-        }
-
-        // Single-team view: capture only the stats grid (all cards, no header/tabs)
-        document.getElementById('screenshot-btn').addEventListener('click', async () => {
-            const teamName = document.getElementById('selected-team-name').textContent.trim().replace(/\s+/g, '-');
-            const grid = document.querySelector('.stats-grid');
-            const dashboard = document.querySelector('.dashboard');
-
-            const prev = {
-                gridOverflow: grid.style.overflow,
-                gridHeight: grid.style.height,
-                gridMaxHeight: grid.style.maxHeight,
-                dashOverflow: dashboard.style.overflow
-            };
-            grid.style.overflow = 'visible';
-            grid.style.height = 'auto';
-            grid.style.maxHeight = 'none';
-            dashboard.style.overflow = 'visible';
-
-            try {
-                await captureElement(grid, `${teamName}-stats.png`);
-            } finally {
-                grid.style.overflow = prev.gridOverflow;
-                grid.style.height = prev.gridHeight;
-                grid.style.maxHeight = prev.gridMaxHeight;
-                dashboard.style.overflow = prev.dashOverflow;
-            }
-        });
-
-        // Compare modal: capture only the modal panel itself
-        document.getElementById('modal-screenshot-btn').addEventListener('click', () => {
-            const t1 = document.getElementById('modal-team1-name').textContent.trim().replace(/\s+/g, '-');
-            const t2 = document.getElementById('modal-team2-name').textContent.trim().replace(/\s+/g, '-');
-            const cat = document.getElementById('modal-category-pill').textContent.trim().toLowerCase();
-            captureElement(document.getElementById('stat-modal'), `${t1}-vs-${t2}-${cat}.png`);
-        });
-
-        // ============================================
-        //  Head to Head Modal
-        // ============================================
-
-        const h2hModalOverlay = document.getElementById('h2h-modal-overlay');
-        const h2hCloseBtn     = document.getElementById('h2h-close-btn');
-        const h2hTeam1Name    = document.getElementById('h2h-team1-name');
-        const h2hTeam2Name    = document.getElementById('h2h-team2-name');
-        const h2hBody         = document.getElementById('h2h-body');
-
-        document.getElementById('h2h-btn').addEventListener('click', openH2HModal);
-
-        async function openH2HModal() {
-            let team1 = compareDropdown1.dataset.value;
-            let team2 = compareDropdown2.dataset.value;
-
-            if (team1 === team2) {
-                return;
-            }
-
-            let t1Name = compareDropdown1.querySelector('.compare-selected-team').textContent.trim();
-            let t2Name = compareDropdown2.querySelector('.compare-selected-team').textContent.trim();
-
-            // Always show West Ham on the left (team1) side
-            if (team2 === 'west-ham') {
-                [team1, team2] = [team2, team1];
-                [t1Name, t2Name] = [t2Name, t1Name];
-            }
-
-            h2hTeam1Name.textContent = t1Name;
-            h2hTeam2Name.textContent = t2Name;
-
-            h2hBody.innerHTML = `
-                <div class="h2h-loading">
-                    <div class="loading-spinner"></div>
-                    <p>Fetching Premier League records…</p>
-                </div>
-            `;
-
-            h2hModalOverlay.classList.add('open');
-            document.body.style.overflow = 'hidden';
-
-            try {
-                const resp = await fetch(`/api/h2h?team1=${team1}&team2=${team2}`);
-                const data = await resp.json();
-
-                if (data.error) {
-                    h2hBody.innerHTML = `<div class="h2h-error">${data.error}</div>`;
-                    return;
-                }
-
-                renderH2HModal(data);
-            } catch (err) {
-                h2hBody.innerHTML = `<div class="h2h-error">Failed to load head to head data. Please try again.</div>`;
-            }
-        }
-
-        let currentH2HData = null;
-
-        function renderH2HModal(data) {
-            currentH2HData = data;
-            renderH2HContent('all');
-        }
-
-        function renderH2HContent(filter) {
-            const { team1, team2, overall, home, away, recent } = currentH2HData;
-
-            let record, filteredRecent;
-            if (filter === 'home') {
-                record = home;
-                filteredRecent = recent.filter(m => m.home === team1);
-            } else if (filter === 'away') {
-                record = away;
-                filteredRecent = recent.filter(m => m.home === team2);
-            } else {
-                record = overall;
-                filteredRecent = recent;
-            }
-
-            const displayRecent = filteredRecent.slice(0, 5);
-            const played = record.w + record.d + record.l;
-
-            let html = `
-                <div class="h2h-ground-filter">
-                    <button class="h2h-filter-btn ${filter === 'all'  ? 'active' : ''}" onclick="renderH2HContent('all')">All Grounds</button>
-                    <button class="h2h-filter-btn ${filter === 'home' ? 'active' : ''}" onclick="renderH2HContent('home')">${team1} at Home</button>
-                    <button class="h2h-filter-btn ${filter === 'away' ? 'active' : ''}" onclick="renderH2HContent('away')">${team2} at Home</button>
-                </div>
-
-                <div class="h2h-summary">
-                    <div class="h2h-played">${played} Premier League meeting${played !== 1 ? 's' : ''}</div>
-                    <div class="h2h-record">
-                        <div class="h2h-stat-block h2h-win">
-                            <span class="h2h-stat-num">${record.w}</span>
-                            <span class="h2h-stat-label">${team1} Wins</span>
-                        </div>
-                        <div class="h2h-stat-block h2h-draw">
-                            <span class="h2h-stat-num">${record.d}</span>
-                            <span class="h2h-stat-label">Draws</span>
-                        </div>
-                        <div class="h2h-stat-block h2h-loss">
-                            <span class="h2h-stat-num">${record.l}</span>
-                            <span class="h2h-stat-label">${team2} Wins</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            if (filter === 'all') {
-                html += `
-                    <div class="h2h-splits">
-                        <div class="h2h-split-col">
-                            <div class="h2h-split-title">At ${team1}'s Ground</div>
-                            <div class="h2h-split-record">
-                                <span class="h2h-split-w">${home.w}W</span>
-                                <span class="h2h-split-d">${home.d}D</span>
-                                <span class="h2h-split-l">${home.l}L</span>
-                            </div>
-                        </div>
-                        <div class="h2h-split-divider"></div>
-                        <div class="h2h-split-col">
-                            <div class="h2h-split-title">At ${team2}'s Ground</div>
-                            <div class="h2h-split-record">
-                                <span class="h2h-split-w">${away.w}W</span>
-                                <span class="h2h-split-d">${away.d}D</span>
-                                <span class="h2h-split-l">${away.l}L</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            if (displayRecent && displayRecent.length > 0) {
-                html += `<div class="h2h-recent-header">Recent Meetings</div>`;
-                html += `<div class="h2h-recent-list">`;
-
-                displayRecent.forEach(match => {
-                    const t1IsHome = match.home === team1;
-                    const t1Score  = t1IsHome ? match.home_score : match.away_score;
-                    const t2Score  = t1IsHome ? match.away_score : match.home_score;
-
-                    let resultClass = 'draw';
-                    if (t1Score > t2Score) resultClass = 'win';
-                    else if (t1Score < t2Score) resultClass = 'loss';
-
-                    const homeWon = match.home_score > match.away_score;
-                    const awayWon = match.away_score > match.home_score;
-
-                    html += `
-                        <div class="h2h-match-row ${resultClass}">
-                            <span class="h2h-match-date">${match.date}</span>
-                            <div class="h2h-match-score">
-                                <span class="h2h-match-team ${match.home === team1 ? 'is-team1' : ''} ${homeWon ? 'winner' : ''}">${match.home}</span>
-                                <span class="h2h-score-box">${match.home_score} – ${match.away_score}</span>
-                                <span class="h2h-match-team ${match.away === team1 ? 'is-team1' : ''} ${awayWon ? 'winner' : ''}">${match.away}</span>
-                            </div>
-                            <span class="h2h-match-season">${match.season}</span>
-                        </div>
-                    `;
-                });
-
-                html += `</div>`;
-            }
-
-            h2hBody.innerHTML = html;
-        }
-
-        function closeH2HModal() {
-            h2hModalOverlay.classList.remove('open');
-            document.body.style.overflow = '';
-        }
-
-        h2hCloseBtn.addEventListener('click', closeH2HModal);
-        h2hModalOverlay.addEventListener('click', (e) => {
-            if (e.target === h2hModalOverlay) closeH2HModal();
-        });
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && h2hModalOverlay.classList.contains('open')) closeH2HModal();
-        });
-
-        // ============================================
-        //  Team News Modal
-        // ============================================
-
-        const newsModalOverlay = document.getElementById('news-modal-overlay');
-        const newsCloseBtn     = document.getElementById('news-close-btn');
-        const newsTeam1Name    = document.getElementById('news-team1-name');
-        const newsTeam2Name    = document.getElementById('news-team2-name');
-        const newsBody         = document.getElementById('news-body');
-
-        document.getElementById('news-btn').addEventListener('click', openNewsModal);
-
-        async function openNewsModal() {
-            const team1 = compareDropdown1.dataset.value;
-            const team2 = compareDropdown2.dataset.value;
-            if (team1 === team2) return;
-
-            const t1Name = compareDropdown1.querySelector('.compare-selected-team').textContent.trim();
-            const t2Name = compareDropdown2.querySelector('.compare-selected-team').textContent.trim();
-
-            newsTeam1Name.textContent = t1Name;
-            newsTeam2Name.textContent = t2Name;
-
-            newsBody.innerHTML = `
-                <div class="news-loading">
-                    <div class="loading-spinner"></div>
-                    <p>Fetching latest team news…</p>
-                </div>
-            `;
-
-            newsModalOverlay.classList.add('open');
-            document.body.style.overflow = 'hidden';
-
-            try {
-                const resp = await fetch(`/api/team-news?team1=${team1}&team2=${team2}`);
-                const data = await resp.json();
-                renderNewsModal(data);
-            } catch (err) {
-                newsBody.innerHTML = `<div class="news-error">Failed to load team news. Please try again.</div>`;
-            }
-        }
-
-        function renderNewsModal(data) {
-            function renderPlayers(teamData) {
-                if (teamData.error && (!teamData.players || teamData.players.length === 0)) {
-                    return `<div class="news-no-absences news-fetch-error">Could not load news</div>`;
-                }
-                if (!teamData.players || teamData.players.length === 0) {
-                    return `<div class="news-no-absences">✓ No known absentees</div>`;
-                }
-
-                return teamData.players.map(p => {
-                    const badgeClass = p.type === 'suspended' ? 'badge-suspended'
-                                     : p.type === 'out'       ? 'badge-out'
-                                     :                          'badge-doubt';
-                    const rowClass   = p.type === 'suspended' ? 'row-suspended'
-                                     : p.type === 'out'       ? 'row-out'
-                                     :                          'row-doubt';
-                    const returnText = p.return && p.return !== 'Unknown'
-                                     ? `Returns ${p.return}` : 'Return unknown';
-                    return `
-                        <div class="news-player-row ${rowClass}">
-                            <div class="news-row-top">
-                                <span class="news-player-name">${p.name}</span>
-                                <span class="news-status-badge ${badgeClass}">${p.status}</span>
-                            </div>
-                            <div class="news-row-bottom">
-                                <span class="news-player-reason">${p.reason || '—'}</span>
-                                <span class="news-return-date">${returnText}</span>
-                            </div>
-                        </div>`;
-                }).join('');
-            }
-
-            const count1 = data.team1.players ? data.team1.players.length : 0;
-            const count2 = data.team2.players ? data.team2.players.length : 0;
-
-            newsBody.innerHTML = `
-                <div class="news-columns">
-                    <div class="news-col">
-                        <div class="news-col-header">${count1} absentee${count1 !== 1 ? 's' : ''}</div>
-                        ${renderPlayers(data.team1)}
-                    </div>
-                    <div class="news-col-divider"></div>
-                    <div class="news-col">
-                        <div class="news-col-header">${count2} absentee${count2 !== 1 ? 's' : ''}</div>
-                        ${renderPlayers(data.team2)}
-                    </div>
-                </div>
-            `;
-        }
-
-        function closeNewsModal() {
-            newsModalOverlay.classList.remove('open');
-            document.body.style.overflow = '';
-        }
-
-        newsCloseBtn.addEventListener('click', closeNewsModal);
-        newsModalOverlay.addEventListener('click', (e) => {
-            if (e.target === newsModalOverlay) closeNewsModal();
-        });
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && newsModalOverlay.classList.contains('open')) closeNewsModal();
-        });
-
-        // ============================================
-        //  Overview Modal
-        // ============================================
-
-        const OVERVIEW_SECTIONS = [
-            {
-                label: 'Attacking',
-                stats: [
-                    { abbrev: 'G',       category: 'attacking' },
-                    { abbrev: 'G/M',     category: 'attacking' },
-                    { abbrev: 'xG',      category: 'attacking' },
-                    { abbrev: 'POSS%',   category: 'attacking' },
-                    { abbrev: 'SH',      category: 'attacking' },
-                    { abbrev: 'TCH-BOX', category: 'attacking' },
-                ]
-            },
-            {
-                label: 'Passing',
-                stats: [
-                    { abbrev: 'BCC',      category: 'passing' },
-                    { abbrev: 'PASS-KEY', category: 'passing' },
-                    { abbrev: 'CRS',      category: 'passing' },
-                ]
-            },
-            {
-                label: 'Defending',
-                stats: [
-                    { abbrev: 'TKL',    category: 'defending' },
-                    { abbrev: 'INT',    category: 'defending' },
-                    { abbrev: 'CLR',    category: 'defending' },
-                    { abbrev: 'ERR-SH', category: 'defending' },
-                ]
-            },
-            {
-                label: 'Goalkeeping',
-                stats: [
-                    { abbrev: 'GC',   category: 'goalkeeping' },
-                    { abbrev: 'xGA',  category: 'defending' },
-                    { abbrev: 'GC/M', category: 'goalkeeping' },
-                    { abbrev: 'CS',   category: 'goalkeeping' },
-                ]
-            },
-        ];
-
-        const overviewModalOverlay = document.getElementById('overview-modal-overlay');
-        const overviewCloseBtn     = document.getElementById('overview-close-btn');
-        const overviewTeamNameEl   = document.getElementById('overview-team-name');
-        const overviewTeamMetaEl   = document.getElementById('overview-team-meta');
-        const overviewStatsContent = document.getElementById('overview-stats-content');
-
-        function ordinal(n) {
-            const s = ['th','st','nd','rd'];
-            const v = n % 100;
-            return n + (s[(v - 20) % 10] || s[v] || s[0]);
-        }
-
-        // Fetch standings once and cache in JS
-        let _standingsCache = null;
-        async function getStandings() {
-            if (_standingsCache) return _standingsCache;
-            try {
-                const r = await fetch('/api/standings');
-                _standingsCache = await r.json();
-            } catch (e) {
-                _standingsCache = {};
-            }
-            return _standingsCache;
-        }
-
-        async function openOverviewModal() {
-            if (!allStats || !allStats.attacking) return;
-
-            const teamName = document.getElementById('selected-team-name').textContent.trim();
-            overviewTeamNameEl.textContent = teamName;
-            overviewTeamMetaEl.textContent = '';  // clear while loading
-
-            function buildSection(section) {
-                let h = `<div class="overview-section-header">${section.label}</div>`;
-                section.stats.forEach(({ abbrev, category }) => {
-                    const catData = allStats[category];
-                    if (!catData?.success) return;
-                    const stat = catData.stats.find(s => s.abbrev === abbrev);
-                    if (!stat) return;
-
-                    const inverted  = isInvertedStat(abbrev);
-                    const rankClass = getRankClass(stat.rank, inverted);
-
-                    h += `
-                        <div class="overview-stat-row ${rankClass}">
-                            <span class="overview-name">${stat.name}</span>
-                            <div class="overview-value-block">
-                                <span class="overview-value">${stat.club}</span>
-                                ${stat.rank !== '-' ? `<span class="overview-rank-pos">${stat.rank}</span>` : ''}
-                            </div>
-                        </div>
-                    `;
-                });
-                return h;
-            }
-
-            const html = `
-                <div class="overview-columns">
-                    <div class="overview-col">
-                        ${OVERVIEW_SECTIONS.slice(0, 2).map(buildSection).join('')}
-                    </div>
-                    <div class="overview-col">
-                        ${OVERVIEW_SECTIONS.slice(2).map(buildSection).join('')}
-                    </div>
-                </div>
-            `;
-
-            overviewStatsContent.innerHTML = html;
-            overviewModalOverlay.classList.add('open');
-            document.body.style.overflow = 'hidden';
-
-            // Populate position + points from standings (async, fills in after open)
-            getStandings().then(standings => {
-                const teamKey = currentTeam;
-                if (standings && teamKey && standings[teamKey]) {
-                    const s = standings[teamKey];
-                    overviewTeamMetaEl.textContent = `${ordinal(s.position)} · ${s.points} pts`;
-                }
-            });
-
-            requestAnimationFrame(() => {
-                overviewStatsContent.querySelectorAll('.overview-stat-row').forEach((el, i) => {
-                    setTimeout(() => el.classList.add('animate-in'), i * 25);
-                });
-            });
-        }
-
-        function closeOverviewModal() {
-            overviewModalOverlay.classList.remove('open');
-            document.body.style.overflow = '';
-        }
-
-        overviewCloseBtn.addEventListener('click', closeOverviewModal);
-        overviewModalOverlay.addEventListener('click', (e) => {
-            if (e.target === overviewModalOverlay) closeOverviewModal();
-        });
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && overviewModalOverlay.classList.contains('open')) closeOverviewModal();
-        });
-
-        // ============================================
-        //  Predicted Lineups Modal
-        // ============================================
-
-        const lineupsModalOverlay = document.getElementById('lineups-modal-overlay');
-        const lineupsCloseBtn     = document.getElementById('lineups-close-btn');
-        const lineupsTeam1Name    = document.getElementById('lineups-team1-name');
-        const lineupsTeam2Name    = document.getElementById('lineups-team2-name');
-        const lineupsBody         = document.getElementById('lineups-body');
-
-        // Persist chosen kit colours between modal opens
-        let lineupT1Color    = '#7B2035';
-        let lineupT2Color    = '#1BB1E7';
-        let lineupT1NumColor = '#FFFFFF';
-        let lineupT2NumColor = '#FFFFFF';
-
-        document.getElementById('lineups-btn').addEventListener('click', openLineupsModal);
-
-        async function openLineupsModal() {
-            const team1 = compareDropdown1.dataset.value;
-            const team2 = compareDropdown2.dataset.value;
-            if (team1 === team2) return;
-
-            const t1Name = compareDropdown1.querySelector('.compare-selected-team').textContent.trim();
-            const t2Name = compareDropdown2.querySelector('.compare-selected-team').textContent.trim();
-
-            lineupsTeam1Name.textContent = t1Name;
-            lineupsTeam2Name.textContent = t2Name;
-
-            lineupsBody.innerHTML = `
-                <div class="lineups-loading">
-                    <div class="loading-spinner"></div>
-                    <p>Building predicted lineups…</p>
-                </div>
-            `;
-
-            lineupsModalOverlay.classList.add('open');
-            document.body.style.overflow = 'hidden';
-
-            try {
-                const resp = await fetch(`/api/predicted-lineups?team1=${team1}&team2=${team2}`);
-                const data = await resp.json();
-
-                if (data.error) {
-                    lineupsBody.innerHTML = `<div class="lineups-error">${data.error}</div>`;
-                    return;
-                }
-
-                renderLineupsModal(data);
-            } catch (err) {
-                lineupsBody.innerHTML = `<div class="lineups-error">Failed to load predicted lineups. Please try again.</div>`;
-            }
-        }
-
-        function renderLineupsModal(data) {
-            const { team1, team2, sameMatch } = data;
-
-            // If a team has an error, show a message in place of their players
-            function renderPlayers(teamData, isLeft) {
-                if (teamData.error || !teamData.starters || teamData.starters.length === 0) {
-                    return `<div class="pitch-no-lineup">${teamData.error || 'Lineup not yet available'}</div>`;
-                }
-                return teamData.starters.map(p => {
-                    // x = depth from own goal (0=own goal, ~0.9=opp half)
-                    // y = lateral position from team's own perspective (0=top, 1=bottom)
-                    // Team 2 attacks in the opposite direction, so y must be flipped
-                    const leftPct = isLeft ? p.x * 50 : 50 + (1 - p.x) * 50;
-                    const topPct  = isLeft ? p.y * 100 : (1 - p.y) * 100;
-                    // Show surname only (last word of name)
-                    const surname   = p.name.split(' ').slice(-1)[0];
-                    const dotColor  = isLeft ? lineupT1Color    : lineupT2Color;
-                    const numColor  = isLeft ? lineupT1NumColor : lineupT2NumColor;
-                    return `
-                        <div class="pitch-player ${isLeft ? 'chip-t1' : 'chip-t2'}"
-                             style="left:${leftPct.toFixed(1)}%;top:${topPct.toFixed(1)}%">
-                            <div class="player-dot" style="background:${dotColor}"><span class="player-shirt" style="color:${numColor}">${p.shirt}</span></div>
-                            <span class="player-name">${surname}</span>
-                        </div>`;
-                }).join('');
-            }
-
-            // Match info banner when both teams face each other
-            let matchBanner = '';
-            if (sameMatch && team1.nextMatch && team1.nextMatch.kickoff) {
-                const ko = new Date(team1.nextMatch.kickoff);
-                const dateStr = ko.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-                const timeStr = ko.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-                const homeTeam  = team1.nextMatch.isHome ? team1.name : team2.name;
-                const awayTeam  = team1.nextMatch.isHome ? team2.name : team1.name;
-                matchBanner = `
-                    <div class="lineup-match-banner">
-                        <span class="match-banner-teams">${homeTeam} vs ${awayTeam}</span>
-                        <span class="match-banner-time">${dateStr} · ${timeStr}</span>
-                    </div>`;
-            }
-
-            const t1Form = team1.formation || '';
-            const t2Form = team2.formation || '';
-            const badge  = (team1.lineupType === 'lineup' || team2.lineupType === 'lineup')
-                           ? '<span class="lineup-confirmed-badge">CONFIRMED</span>'
-                           : '<span class="lineup-predicted-badge">PREDICTED</span>';
-
-            lineupsBody.innerHTML = `
-                ${matchBanner}
-                <div class="lineups-meta">
-                    <span class="formation-tag">${t1Form}</span>
-                    ${badge}
-                    <span class="formation-tag">${t2Form}</span>
-                </div>
-                <div class="pitch-container">
-                    <div class="pitch-markings">
-                        <svg class="pitch-svg" viewBox="0 0 1000 600" preserveAspectRatio="none">
-                            <rect x="2" y="2" width="996" height="596" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="3"/>
-                            <line x1="500" y1="0" x2="500" y2="600" stroke="rgba(255,255,255,0.38)" stroke-width="2"/>
-                            <circle cx="500" cy="300" r="90" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2"/>
-                            <circle cx="500" cy="300" r="5" fill="rgba(255,255,255,0.45)"/>
-                            <rect x="2" y="148" width="180" height="304" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="2"/>
-                            <rect x="2" y="228" width="64" height="144" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>
-                            <circle cx="152" cy="300" r="4" fill="rgba(255,255,255,0.35)"/>
-                            <rect x="818" y="148" width="180" height="304" fill="none" stroke="rgba(255,255,255,0.22)" stroke-width="2"/>
-                            <rect x="934" y="228" width="64" height="144" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>
-                            <circle cx="848" cy="300" r="4" fill="rgba(255,255,255,0.35)"/>
-                        </svg>
-                    </div>
-                    <div class="pitch-players">
-                        ${renderPlayers(team1, true)}
-                        ${renderPlayers(team2, false)}
-                    </div>
-                </div>
-                <div class="lineups-legend">
-                    <span class="legend-item"><span class="legend-dot" id="legend-dot-t1" style="background:${lineupT1Color}"></span>${team1.name || ''}</span>
-                    <span class="lineups-note">Source: FotMob</span>
-                    <span class="legend-item legend-right"><span class="legend-dot" id="legend-dot-t2" style="background:${lineupT2Color}"></span>${team2.name || ''}</span>
-                </div>
-                <div class="lineups-color-picker">
-                    <div class="color-picker-group">
-                        <label class="color-picker-label">${team1.name || 'Home'}</label>
-                        <div class="color-picker-swatches">
-                            <div class="color-swatch-item">
-                                <span class="swatch-label">Shirt</span>
-                                <input type="color" class="color-input" id="t1-color-input" value="${lineupT1Color}">
-                            </div>
-                            <div class="color-swatch-item">
-                                <span class="swatch-label">No.</span>
-                                <input type="color" class="color-input" id="t1-num-color-input" value="${lineupT1NumColor}">
-                            </div>
-                        </div>
-                    </div>
-                    <span class="color-picker-title">Kit Colours</span>
-                    <div class="color-picker-group color-picker-right">
-                        <div class="color-picker-swatches">
-                            <div class="color-swatch-item">
-                                <span class="swatch-label">No.</span>
-                                <input type="color" class="color-input" id="t2-num-color-input" value="${lineupT2NumColor}">
-                            </div>
-                            <div class="color-swatch-item">
-                                <span class="swatch-label">Shirt</span>
-                                <input type="color" class="color-input" id="t2-color-input" value="${lineupT2Color}">
-                            </div>
-                        </div>
-                        <label class="color-picker-label">${team2.name || 'Away'}</label>
-                    </div>
-                </div>
-            `;
-
-            // Live kit colour updates
-            document.getElementById('t1-color-input').addEventListener('input', (e) => {
-                lineupT1Color = e.target.value;
-                document.querySelectorAll('.chip-t1 .player-dot').forEach(d => d.style.background = lineupT1Color);
-                const dot = document.getElementById('legend-dot-t1');
-                if (dot) dot.style.background = lineupT1Color;
-            });
-            document.getElementById('t2-color-input').addEventListener('input', (e) => {
-                lineupT2Color = e.target.value;
-                document.querySelectorAll('.chip-t2 .player-dot').forEach(d => d.style.background = lineupT2Color);
-                const dot = document.getElementById('legend-dot-t2');
-                if (dot) dot.style.background = lineupT2Color;
-            });
-            document.getElementById('t1-num-color-input').addEventListener('input', (e) => {
-                lineupT1NumColor = e.target.value;
-                document.querySelectorAll('.chip-t1 .player-shirt').forEach(s => s.style.color = lineupT1NumColor);
-            });
-            document.getElementById('t2-num-color-input').addEventListener('input', (e) => {
-                lineupT2NumColor = e.target.value;
-                document.querySelectorAll('.chip-t2 .player-shirt').forEach(s => s.style.color = lineupT2NumColor);
-            });
-        }
-
-        function closeLineupsModal() {
-            lineupsModalOverlay.classList.remove('open');
-            document.body.style.overflow = '';
-        }
-
-        lineupsCloseBtn.addEventListener('click', closeLineupsModal);
-        lineupsModalOverlay.addEventListener('click', (e) => {
-            if (e.target === lineupsModalOverlay) closeLineupsModal();
-        });
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && lineupsModalOverlay.classList.contains('open')) closeLineupsModal();
-        });
-
-        // Initial load
-        fetchAllStats();
-    </script>
+        const c1=w==='a'?'winner':w==='b'?'loser':'draw';
+        const c2=w==='b'?'winner':w==='a'?'loser':'draw';
+        return `<div class="modal-stat-item animate-in">
+            <div class="modal-val-cell left ${c1}"><div class="modal-val-inner"><span class="modal-main-val">${x.club}</span>${x.rank!=='-'?`<span class="modal-rank-pill">${x.rank}</span>`:''}</div></div>
+            <div class="modal-stat-info"><span class="modal-abbrev">${x.abbrev}</span><span class="modal-stat-name-text">${x.name}</span></div>
+            <div class="modal-val-cell right ${c2}"><div class="modal-val-inner"><span class="modal-main-val">${y.club}</span>${y.rank!=='-'?`<span class="modal-rank-pill">${y.rank}</span>`:''}</div></div>
+        </div>`;
+    }).join('');
+    document.getElementById('modal-wins-num1').textContent=aw;
+    document.getElementById('modal-wins-num2').textContent=bw;
+    statModal.classList.add('open'); document.body.style.overflow='hidden';
+}
+function closeOverlay(el){el.classList.remove('open');document.body.style.overflow='';}
+document.getElementById('modal-close-btn').addEventListener('click',()=>closeOverlay(statModal));
+statModal.addEventListener('click',e=>{if(e.target===statModal)closeOverlay(statModal)});
+
+const overviewOverlay=document.getElementById('overview-modal-overlay');
+const overviewSections=[
+    ['Attacking',[['G','attacking'],['G/M','attacking'],['POSS%','attacking'],['SH','attacking'],['SOT','attacking'],['SOT%','attacking']]],
+    ['Passing',[['PASS/M','passing'],['PASS%','passing'],['PASS-KEY','passing'],['CRS','passing']]],
+    ['Defending',[['TKL','defending'],['INT','defending'],['CLR','defending'],['DUEL%','defending']]],
+    ['Goalkeeping',[['GC','goalkeeping'],['GC/M','goalkeeping'],['SV/M','goalkeeping'],['CS','goalkeeping']]]
+];
+async function openOverview(){
+    document.getElementById('overview-team-name').textContent=selectedTeam.textContent.trim();
+    document.getElementById('overview-team-meta').textContent='';
+    document.getElementById('overview-stats-content').innerHTML=`<div class="overview-columns"><div class="overview-col">${overviewSections.slice(0,2).map(buildOverview).join('')}</div><div class="overview-col">${overviewSections.slice(2).map(buildOverview).join('')}</div></div>`;
+    overviewOverlay.classList.add('open'); document.body.style.overflow='hidden';
+    try{
+        const standings=await fetchJson('/api/standings');
+        const s=standings[currentTeam];
+        if(s)document.getElementById('overview-team-meta').textContent=`${ordinal(s.position)} · ${s.points} pts · ${s.played} played`;
+    }catch(e){}
+}
+function buildOverview(section){
+    const [label,items]=section;
+    let h=`<div class="overview-section-header">${label}</div>`;
+    items.forEach(([abbr,cat])=>{
+        const s=allStats[cat]?.stats?.find(x=>x.abbrev===abbr); if(!s)return;
+        h+=`<div class="overview-stat-row ${rankClass(s.rank)} animate-in"><span class="overview-name">${s.name}</span><div class="overview-value-block"><span class="overview-value">${s.club}</span>${s.rank!=='-'?`<span class="overview-rank-pos">${s.rank}</span>`:''}</div></div>`;
+    });
+    return h;
+}
+function ordinal(n){const v=n%100;const suf=(v>=11&&v<=13)?'th':({1:'st',2:'nd',3:'rd'}[n%10]||'th');return `${n}${suf}`}
+document.getElementById('overview-close-btn').addEventListener('click',()=>closeOverlay(overviewOverlay));
+overviewOverlay.addEventListener('click',e=>{if(e.target===overviewOverlay)closeOverlay(overviewOverlay)});
+
+const h2hOverlay=document.getElementById('h2h-modal-overlay');
+document.getElementById('h2h-btn').addEventListener('click',async()=>{
+    let t1=compare1.dataset.value,t2=compare2.dataset.value;
+    let n1=compare1.querySelector('.compare-selected-team').textContent.trim(),n2=compare2.querySelector('.compare-selected-team').textContent.trim();
+    if(t1===t2)return;
+    if(t2==='west-ham'){[t1,t2]=[t2,t1];[n1,n2]=[n2,n1];}
+    document.getElementById('h2h-team1-name').textContent=n1;
+    document.getElementById('h2h-team2-name').textContent=n2;
+    const body=document.getElementById('h2h-body');
+    body.innerHTML='<div class="h2h-loading"><div class="loading-spinner"></div><p>Fetching head-to-head records…</p></div>';
+    h2hOverlay.classList.add('open');document.body.style.overflow='hidden';
+    try{renderH2H(await fetchJson(`/api/h2h?team1=${t1}&team2=${t2}`));}
+    catch(e){body.innerHTML=`<div class="h2h-error">${e.message}</div>`;}
+});
+function renderH2H(data){
+    const body=document.getElementById('h2h-body');
+    const recent=(data.recent||[]).slice(0,5);
+    if(!recent.length){
+        body.innerHTML=`<div class="h2h-error">No previous meetings available from APIfootball for ${data.team1} and ${data.team2}.</div>`;
+        return;
+    }
+    body.innerHTML=`<div class="h2h-summary">
+        <div class="h2h-played">Last ${data.played} meeting${data.played===1?'':'s'}</div>
+        <div class="h2h-record">
+            <div class="h2h-stat-block h2h-win"><span class="h2h-stat-num">${data.overall.w}</span><span class="h2h-stat-label">${data.team1} Wins</span></div>
+            <div class="h2h-stat-block h2h-draw"><span class="h2h-stat-num">${data.overall.d}</span><span class="h2h-stat-label">Draws</span></div>
+            <div class="h2h-stat-block h2h-loss"><span class="h2h-stat-num">${data.overall.l}</span><span class="h2h-stat-label">${data.team2} Wins</span></div>
+        </div></div>
+        <div class="h2h-recent-header">Recent Meetings</div><div class="h2h-recent-list">${recent.map(m=>`<div class="h2h-match-row"><span class="h2h-match-date">${m.date}</span><div class="h2h-match-score"><span class="h2h-match-team">${m.home}</span><span class="h2h-score-box">${m.home_score} – ${m.away_score}</span><span class="h2h-match-team">${m.away}</span></div><span class="h2h-match-season">${m.season}</span></div>`).join('')}</div>`;
+}
+document.getElementById('h2h-close-btn').addEventListener('click',()=>closeOverlay(h2hOverlay));
+h2hOverlay.addEventListener('click',e=>{if(e.target===h2hOverlay)closeOverlay(h2hOverlay)});
+
+refreshBtn.addEventListener('click',()=>compareMode?fetchCompareStats():fetchTeamStats());
+document.getElementById('screenshot-btn').addEventListener('click',async()=>{
+    const canvas=await html2canvas(statsContainer,{backgroundColor:'#0F0F13',useCORS:true,scale:1});
+    const a=document.createElement('a');a.download=`${selectedTeam.textContent.trim().replace(/\s+/g,'-')}-stats.png`;a.href=canvas.toDataURL('image/png');a.click();
+});
+document.getElementById('modal-screenshot-btn').addEventListener('click',async()=>{
+    const panel=document.getElementById('stat-modal');
+    const canvas=await html2canvas(panel,{backgroundColor:'#0F0F13',useCORS:true,scale:1});
+    const a=document.createElement('a');a.download='championship-comparison.png';a.href=canvas.toDataURL('image/png');a.click();
+});
+document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){[statModal,overviewOverlay,h2hOverlay].forEach(closeOverlay);}
+});
+
+fetchTeamStats();
+</script>
 </body>
 </html>
