@@ -42,11 +42,23 @@ You can then check `/api/health`. It should return `"api_key_configured": true`.
 
 ## Head-to-head records
 
-The Compare view uses APIfootball's `get_H2H` endpoint. The dedicated `/api/h2h` handler normalises the provider response, removes duplicate or unplayed fixtures, sorts completed meetings newest-first, and returns the five most recent meetings for the selected clubs.
+The Compare view uses APIfootball's `get_H2H` endpoint. The dedicated `/api/h2h` handler normalises the provider response, removes duplicate or unplayed fixtures, sorts completed meetings newest-first, and uses only the five most recent completed meetings for both the displayed fixtures and W/D/L summary.
+
+## API caching
+
+To protect the free API allowance and avoid rebuilding identical season data for repeated visitors, Vercel edge-caches API responses:
+
+- Team statistics: 15 minutes, with stale responses available while revalidating for up to 6 hours.
+- Championship standings: 5 minutes, with stale responses available while revalidating for up to 1 hour.
+- Head-to-head records: 6 hours, with stale responses available while revalidating for up to 24 hours.
+
+The application also keeps short-lived in-process caches for provider responses within a warm serverless function.
 
 ## Data-quality handling
 
 APIfootball occasionally returns duplicate match-stat keys. The importer intentionally keeps the **last valid occurrence** for a stat within a fixture. Player-level figures are only used for fields that reconcile appropriately; match-level shot figures take precedence over summed player shots.
+
+Missing provider data is shown as `—` rather than treated as a genuine zero, and incomplete metrics are excluded from league rankings.
 
 ## Known limitation
 
