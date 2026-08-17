@@ -187,6 +187,7 @@ def h2h():
 
         matches = [m for m in _load_h2h(team1, team2) if _is_finished(m)]
         matches.sort(key=_date_value, reverse=True)
+        matches = matches[:5]
 
         w = d = l = 0
         goals_for = goals_against = 0
@@ -232,7 +233,7 @@ def h2h():
             "overall": {"w": w, "d": d, "l": l},
             "goals_for": goals_for,
             "goals_against": goals_against,
-            "recent": parsed[:5],
+            "recent": parsed,
         })
     except Exception as exc:
         return jsonify({"error": str(exc)}), 503
