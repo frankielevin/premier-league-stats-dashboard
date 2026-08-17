@@ -18,6 +18,10 @@
       "use": "@vercel/python"
     },
     {
+      "src": "standings.py",
+      "use": "@vercel/python"
+    },
+    {
       "src": "web.py",
       "use": "@vercel/python"
     }
@@ -60,7 +64,7 @@
     },
     {
       "src": "/api/standings",
-      "dest": "app.py",
+      "dest": "standings.py",
       "headers": {
         "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600"
       }
