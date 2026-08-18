@@ -120,6 +120,11 @@ def _team_payload(team_key, team_name, completed, upcoming):
     }
 
 
+def _pair_key(team1_key, team2_key):
+    keys = sorted(key for key in (team1_key, team2_key) if key)
+    return "__".join(keys) if len(keys) == 2 and keys[0] != keys[1] else ""
+
+
 def build_form_fixtures():
     if _cache["data"] is not None and time.time() - _cache["ts"] < CACHE_TTL:
         return _cache["data"]
@@ -158,6 +163,14 @@ def build_form_fixtures():
         elif _match_datetime(match) != datetime.min and _match_datetime(match).date() >= today:
             upcoming.append(fixture)
 
+    # The first future fixture for every unordered club pair. This lets Compare
+    # show the next league meeting without making another provider request.
+    next_meetings = {}
+    for fixture in upcoming:
+        pair_key = _pair_key(fixture.get("home_key"), fixture.get("away_key"))
+        if pair_key and pair_key not in next_meetings:
+            next_meetings[pair_key] = fixture
+
     payload = {
         "success": True,
         "league": "Championship",
@@ -166,6 +179,7 @@ def build_form_fixtures():
             key: _team_payload(key, name, completed, upcoming)
             for key, name in sorted(team_names.items(), key=lambda item: item[1])
         },
+        "next_meetings": next_meetings,
     }
     _cache.update({"ts": time.time(), "data": payload})
     return payload

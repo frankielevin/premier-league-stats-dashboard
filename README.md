@@ -29,23 +29,49 @@ In the Vercel project, open **Settings → Environment Variables**, add `APIFOOT
 
 You can then check `/api/health`. It should return `"api_key_configured": true`.
 
-## Current stat groups
+## Current feature set
 
-- Attacking
-- Passing
-- Defending
-- Goalkeeping
-- Miscellaneous
-- Club comparison
-- Championship standings in Overview
-- Head-to-head records
-- Clickable Championship stat leaderboards
+- Attacking, Passing, Defending, Goalkeeping and Miscellaneous team-stat groups
+- Clickable Championship-wide stat leaderboards
+- Championship form, previous match and next fixture on club pages
+- Full 24-club Championship table with Overall, Home and Away views
+- Club comparison with category-by-category stat scoring
+- Enhanced Opponent Preview inside Compare mode
+- Last-five head-to-head records
+- Screenshot-friendly 1280x720 exports for the Championship table and opponent preview
 
 ## Stat leaderboards
 
 Every standard stat card can open a Championship-wide leaderboard for that metric. The selected club is highlighted, ranking direction follows the same higher-is-better/lower-is-better rules as the main dashboard, ties use the existing league ranking logic, and incomplete provider data remains unranked at the bottom rather than being treated as zero.
 
 The leaderboard endpoint reuses the dashboard's existing season aggregation and is edge-cached for 15 minutes, so it does not introduce a new APIfootball data source or 24 separate team requests.
+
+## Form and fixtures
+
+Club pages show recent Championship form, the latest completed league match and the next scheduled league fixture. Fixture times are requested from APIfootball using the `Europe/London` timezone so BST/GMT changes are handled by the provider rather than by applying a manual offset.
+
+The form/fixtures endpoint requests the Championship season schedule once and derives team-level context from that cached response.
+
+## Championship table
+
+The Table view uses APIfootball standings data to show all 24 clubs with Overall, Home and Away splits. It includes position, played, wins, draws, losses, goals for, goals against, goal difference and points.
+
+The selected club is highlighted and the table can be exported as a table-only 1280x720 PNG for video use. Club badges are proxied through the app so they remain available to browser-based screenshot capture.
+
+## Enhanced Opponent Preview
+
+Compare mode includes a compact match-preparation panel for the two selected clubs. It brings together:
+
+- current Championship position, points, W-D-L and goal difference
+- recent Championship form
+- last result and next league fixture
+- the next scheduled Championship meeting between the selected clubs
+- a compact last-five H2H summary and latest meeting
+- selected key season statistics and their current league ranks
+
+The next-meeting lookup is derived from the same cached season fixture response used for form and fixtures, so it does not add another APIfootball provider request. Opponent-preview data is lazy-loaded only when Compare is opened.
+
+The panel can be exported as a 1280x720 PNG for use in video production.
 
 ## Head-to-head records
 
@@ -59,9 +85,10 @@ The dashboard can display totals and per-match versions of the same statistic, b
 
 The app keeps short-lived in-process caches and configures Vercel edge caching for the public API responses:
 
-- stats: 15 minutes, with stale-while-revalidate for 1 hour
+- stats: 15 minutes, with stale-while-revalidate for 6 hours
 - stat leaderboards: 15 minutes, with stale-while-revalidate for 6 hours
-- standings: 10 minutes, with stale-while-revalidate for 1 hour
+- form and fixtures: 15 minutes, with stale-while-revalidate for 6 hours
+- standings: 5 minutes, with stale-while-revalidate for 1 hour
 - head-to-head: 6 hours, with stale-while-revalidate for 24 hours
 
 This reduces repeated provider calls and cold-start season rebuilds while keeping the dashboard appropriately fresh.
