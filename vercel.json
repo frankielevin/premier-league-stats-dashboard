@@ -1,15 +1,48 @@
 {
   "version": 2,
   "builds": [
-    {
-      "src": "app.py",
-      "use": "@vercel/python"
-    }
+    { "src": "app.py", "use": "@vercel/python" },
+    { "src": "championship_stats.py", "use": "@vercel/python" },
+    { "src": "championship_h2h.py", "use": "@vercel/python" },
+    { "src": "championship_leaderboard.py", "use": "@vercel/python" },
+    { "src": "championship_form_fixtures.py", "use": "@vercel/python" },
+    { "src": "championship_standings.py", "use": "@vercel/python" },
+    { "src": "championship_web.py", "use": "@vercel/python" }
   ],
   "routes": [
     {
-      "src": "/(.*)",
-      "dest": "app.py"
-    }
+      "src": "/championship/api/h2h",
+      "dest": "championship_h2h.py",
+      "headers": { "Cache-Control": "public, s-maxage=21600, stale-while-revalidate=86400" }
+    },
+    {
+      "src": "/championship/api/leaderboard",
+      "dest": "championship_leaderboard.py",
+      "headers": { "Cache-Control": "public, s-maxage=900, stale-while-revalidate=21600" }
+    },
+    {
+      "src": "/championship/api/form-fixtures",
+      "dest": "championship_form_fixtures.py",
+      "headers": { "Cache-Control": "public, s-maxage=900, stale-while-revalidate=21600" }
+    },
+    {
+      "src": "/championship/api/stats",
+      "dest": "championship_stats.py",
+      "headers": { "Cache-Control": "public, s-maxage=900, stale-while-revalidate=21600" }
+    },
+    {
+      "src": "/championship/api/stats/(.*)",
+      "dest": "championship_stats.py",
+      "headers": { "Cache-Control": "public, s-maxage=900, stale-while-revalidate=21600" }
+    },
+    {
+      "src": "/championship/api/standings",
+      "dest": "championship_standings.py",
+      "headers": { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600" }
+    },
+    { "src": "/championship/static/(.*)", "dest": "championship_web.py" },
+    { "src": "/championship", "dest": "championship_web.py" },
+    { "src": "/championship/(.*)", "dest": "championship_web.py" },
+    { "src": "/(.*)", "dest": "app.py" }
   ]
 }

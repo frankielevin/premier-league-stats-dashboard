@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Championship Stats 2026-27</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        .data-note { font-size: 11px; opacity: .65; margin-top: 8px; }
+        .api-error { grid-column: 1/-1; text-align:center; padding:48px 24px; }
+        .api-error code { display:block; margin-top:12px; opacity:.75; }
+        .compare-actions { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:20px; }
+        .simple-action-btn {
+            border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04);
+            color:inherit; border-radius:10px; padding:10px 16px; cursor:pointer; font:inherit;
+        }
+        .simple-action-btn:hover { background:rgba(255,255,255,.08); }
+        .overview-meta { opacity:.7; font-size:13px; margin-top:4px; }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <header class="header">
+        <div class="club-info">
+            <div class="custom-dropdown" id="team-dropdown">
+                <button class="dropdown-trigger" id="dropdown-trigger">
+                    <span class="selected-team" id="selected-team-name">West Ham United</span>
+                    <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                </button>
+                <div class="dropdown-menu" id="dropdown-menu">
+                    <div class="dropdown-search">
+                        <input type="text" id="team-search" placeholder="Search teams..." autocomplete="off">
+                    </div>
+                    <div class="dropdown-list" id="dropdown-list">
+                        {% for key, team in teams.items() %}
+                        <div class="dropdown-item {% if key == 'west-ham' %}active{% endif %}" data-value="{{ key }}">{{ team.name }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            <span class="season-badge">2026-27 Championship</span>
+        </div>
+        <div class="header-actions">
+            <div class="last-updated">
+                <span class="update-label">Last updated</span>
+                <span class="update-time" id="last-updated">--:--</span>
+            </div>
+            <button id="refresh-btn" class="refresh-btn">
+                <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+                </svg>
+                <span>Refresh</span>
+            </button>
+            <button id="screenshot-btn" class="screenshot-btn" title="Save screenshot">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <nav class="tabs">
+        <button class="tab-btn active" data-category="attacking">Attacking</button>
+        <button class="tab-btn" data-category="passing">Passing</button>
+        <button class="tab-btn" data-category="defending">Defending</button>
+        <button class="tab-btn" data-category="goalkeeping">Goalkeeping</button>
+        <button class="tab-btn" data-category="miscellaneous">Miscellaneous</button>
+        <div class="tab-divider"></div>
+        <button class="tab-btn tab-compare" data-category="compare">Compare</button>
+        <button class="tab-btn tab-overview" data-category="overview">Overview</button>
+    </nav>
+
+    <div class="loading" id="loading">
+        <div class="loading-spinner"></div>
+        <p>Fetching Championship stats...</p>
+    </div>
+
+    <main class="stats-grid" id="stats-container"></main>
+
+    <main class="compare-view hidden" id="compare-container">
+        <div class="matchup-header">
+            <div class="matchup-team team-left">
+                <div class="compare-dropdown" id="compare-dropdown-1" data-value="burnley">
+                    <button class="compare-dropdown-trigger">
+                        <span class="compare-selected-team">Burnley</span>
+                        <svg class="compare-dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                    <div class="compare-dropdown-menu">
+                        <div class="compare-dropdown-search"><input type="text" placeholder="Search teams..." autocomplete="off"></div>
+                        <div class="compare-dropdown-list">
+                            {% for key, team in teams.items() %}
+                            <div class="compare-dropdown-item {% if key == 'burnley' %}active{% endif %}" data-value="{{ key }}">{{ team.name }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="team-score" id="team1-score">0</div>
+                <div class="team-score-label">Overall Stats Won</div>
+            </div>
+            <div class="matchup-center">
+                <div class="vs-badge"><span class="vs-text">VS</span></div>
+                <div class="matchup-category" id="current-category-label"></div>
+            </div>
+            <div class="matchup-team team-right">
+                <div class="compare-dropdown" id="compare-dropdown-2" data-value="west-ham">
+                    <button class="compare-dropdown-trigger">
+                        <span class="compare-selected-team">West Ham United</span>
+                        <svg class="compare-dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                    <div class="compare-dropdown-menu">
+                        <div class="compare-dropdown-search"><input type="text" placeholder="Search teams..." autocomplete="off"></div>
+                        <div class="compare-dropdown-list">
+                            {% for key, team in teams.items() %}
+                            <div class="compare-dropdown-item {% if key == 'west-ham' %}active{% endif %}" data-value="{{ key }}">{{ team.name }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="team-score" id="team2-score">0</div>
+                <div class="team-score-label">Overall Stats Won</div>
+            </div>
+        </div>
+
+        <div class="compare-picker">
+            <p class="compare-picker-label">Select a category to view comparison</p>
+            <div class="compare-tabs">
+                <button class="compare-tab-btn" data-compare-category="attacking">Attacking</button>
+                <button class="compare-tab-btn" data-compare-category="passing">Passing</button>
+                <button class="compare-tab-btn" data-compare-category="defending">Defending</button>
+                <button class="compare-tab-btn" data-compare-category="goalkeeping">Goalkeeping</button>
+                <button class="compare-tab-btn" data-compare-category="miscellaneous">Miscellaneous</button>
+            </div>
+        </div>
+
+        <div class="compare-actions">
+            <button class="simple-action-btn" id="h2h-btn">Head to Head Records</button>
+        </div>
+        <div class="compare-stats" id="compare-stats" style="display:none"></div>
+    </main>
+
+    <footer class="footer">
+        <span>Data from APIfootball.com</span>
+        <span class="divider">•</span>
+        <span>Championship 2026-27</span>
+    </footer>
+</div>
+
+<div class="stat-modal-overlay" id="stat-modal-overlay">
+    <div class="stat-modal" id="stat-modal">
+        <button class="modal-close-btn" id="modal-close-btn">×</button>
+        <div class="modal-matchup-header">
+            <div class="modal-team-block modal-left">
+                <div class="modal-team-name" id="modal-team1-name"></div>
+                <div class="modal-wins-display" id="modal-team1-wins">
+                    <span class="modal-wins-num" id="modal-wins-num1">0</span>
+                    <span class="modal-wins-label">stats won</span>
+                </div>
+            </div>
+            <div class="modal-center-block">
+                <div class="modal-vs-badge">VS</div>
+                <div class="modal-category-pill" id="modal-category-pill"></div>
+            </div>
+            <div class="modal-team-block modal-right">
+                <div class="modal-team-name" id="modal-team2-name"></div>
+                <div class="modal-wins-display" id="modal-team2-wins">
+                    <span class="modal-wins-num" id="modal-wins-num2">0</span>
+                    <span class="modal-wins-label">stats won</span>
+                </div>
+            </div>
+        </div>
+        <div class="modal-stats-grid" id="modal-stats-grid"></div>
+    </div>
+    <button class="modal-screenshot-btn" id="modal-screenshot-btn">Save Screenshot</button>
+</div>
+
+<div class="stat-modal-overlay" id="overview-modal-overlay">
+    <div class="stat-modal overview-modal" id="overview-modal">
+        <button class="modal-close-btn" id="overview-close-btn">×</button>
+        <div class="overview-header">
+            <div class="overview-team-info">
+                <div class="overview-team-name" id="overview-team-name">West Ham United</div>
+                <div class="overview-team-meta" id="overview-team-meta"></div>
+            </div>
+            <div class="overview-pill">OVERVIEW</div>
+        </div>
+        <div class="overview-stats-content" id="overview-stats-content"></div>
+    </div>
+</div>
+
+<div class="stat-modal-overlay" id="h2h-modal-overlay">
+    <div class="stat-modal h2h-modal" id="h2h-modal">
+        <button class="modal-close-btn" id="h2h-close-btn">×</button>
+        <div class="h2h-header">
+            <div class="h2h-team-name" id="h2h-team1-name"></div>
+            <div class="h2h-pill">HEAD TO HEAD</div>
+            <div class="h2h-team-name h2h-right" id="h2h-team2-name"></div>
+        </div>
+        <div class="h2h-body" id="h2h-body"></div>
+    </div>
+</div>
+
+<script>
+const categories = ['attacking','passing','defending','goalkeeping','miscellaneous'];
+const lowerIsBetter = new Set(['OFF','GC','GC/M','YC','RC','FOUL','FOUL/M','PKC','POSS-L']);
+// Overall Stats Won deliberately uses one representative metric per concept.
+// Per-match versions of totals are still displayed but do not score a second point.
+const overallCompareMetrics = new Set([
+    'G','POSS%','SH','SOT%','SH-BLK','SH-IN','SH-OUT','A','OFF','WOOD',
+    'PASS','PASS%','PASS-KEY','CRS','CRS%','CNR',
+    'TKL','INT','CLR','BLK','DUEL%','AER-W',
+    'GC','SV','SV-BOX','SV-PK','CS',
+    'YC','RC','FOUL','PKC','PK-W','POSS-L','DRB%'
+]);
+const statsContainer = document.getElementById('stats-container');
+const compareContainer = document.getElementById('compare-container');
+const loading = document.getElementById('loading');
+const refreshBtn = document.getElementById('refresh-btn');
+const lastUpdated = document.getElementById('last-updated');
+const teamDropdown = document.getElementById('team-dropdown');
+const teamTrigger = document.getElementById('dropdown-trigger');
+const teamSearch = document.getElementById('team-search');
+const teamItems = [...document.querySelectorAll('.dropdown-item')];
+const selectedTeam = document.getElementById('selected-team-name');
+const compare1 = document.getElementById('compare-dropdown-1');
+const compare2 = document.getElementById('compare-dropdown-2');
+
+let currentTeam = 'west-ham';
+let currentCategory = 'attacking';
+let compareMode = false;
+let allStats = {};
+let compareStats1 = {};
+let compareStats2 = {};
+
+function parseValue(v) {
+    if (v === undefined || v === null || v === '-') return null;
+    const n = parseFloat(String(v).replace(/,/g,'').replace('%',''));
+    return Number.isFinite(n) ? n : null;
+}
+function rankNumber(rank) {
+    if (!rank || rank === '-') return null;
+    const n = parseInt(String(rank).replace(/\D/g,''));
+    return Number.isFinite(n) ? n : null;
+}
+function rankClass(rank) {
+    const n = rankNumber(rank);
+    if (n === null) return 'rank-none';
+    if (n <= 6) return 'rank-excellent';
+    if (n <= 12) return 'rank-good';
+    if (n <= 18) return 'rank-average';
+    return 'rank-poor';
+}
+function rankLabel(rank) {
+    const n = rankNumber(rank);
+    if (n === null) return '';
+    if (n <= 6) return 'Excellent';
+    if (n <= 12) return 'Good';
+    if (n <= 18) return 'Average';
+    return 'Below Avg';
+}
+function rankPercentage(rank) {
+    const n = rankNumber(rank);
+    if (n === null) return 0;
+    return Math.max(5, 100 - ((n - 1) / 23) * 95);
+}
+function setLoading(on) {
+    loading.style.display = on ? 'flex' : 'none';
+    statsContainer.style.opacity = on ? '0' : '1';
+    compareContainer.style.opacity = on ? '0' : '1';
+    refreshBtn.disabled = on;
+}
+function updateTime() {
+    lastUpdated.textContent = new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+}
+function errorHtml(message) {
+    return `<div class="api-error"><h3>Unable to load stats</h3><p>${message || 'Please try again.'}</p></div>`;
+}
+
+teamTrigger.addEventListener('click', e => {
+    e.stopPropagation();
+    teamDropdown.classList.toggle('open');
+    if (teamDropdown.classList.contains('open')) teamSearch.focus();
+});
+document.addEventListener('click', e => {
+    if (!teamDropdown.contains(e.target)) teamDropdown.classList.remove('open');
+    if (!e.target.closest('.compare-dropdown')) document.querySelectorAll('.compare-dropdown.open').forEach(d=>d.classList.remove('open'));
+});
+teamSearch.addEventListener('input', e => {
+    const q = e.target.value.toLowerCase();
+    teamItems.forEach(i => i.style.display = i.textContent.toLowerCase().includes(q) ? 'block' : 'none');
+});
+teamItems.forEach(item => item.addEventListener('click', () => {
+    currentTeam = item.dataset.value;
+    selectedTeam.textContent = item.textContent.trim();
+    teamItems.forEach(i=>i.classList.remove('active'));
+    item.classList.add('active');
+    teamDropdown.classList.remove('open');
+    fetchTeamStats();
+}));
+
+function initCompareDropdown(el) {
+    const trigger = el.querySelector('.compare-dropdown-trigger');
+    const input = el.querySelector('input');
+    const items = [...el.querySelectorAll('.compare-dropdown-item')];
+    const label = el.querySelector('.compare-selected-team');
+    trigger.addEventListener('click', e => {
+        e.stopPropagation();
+        document.querySelectorAll('.compare-dropdown.open').forEach(d=>{if(d!==el)d.classList.remove('open')});
+        el.classList.toggle('open');
+        if(el.classList.contains('open')) input.focus();
+    });
+    input.addEventListener('input', e => {
+        const q=e.target.value.toLowerCase();
+        items.forEach(i=>i.style.display=i.textContent.toLowerCase().includes(q)?'block':'none');
+    });
+    items.forEach(item=>item.addEventListener('click',()=>{
+        el.dataset.value=item.dataset.value;
+        label.textContent=item.textContent.trim();
+        items.forEach(i=>i.classList.remove('active'));
+        item.classList.add('active');
+        el.classList.remove('open');
+        fetchCompareStats();
+    }));
+}
+initCompareDropdown(compare1);
+initCompareDropdown(compare2);
+
+document.querySelectorAll('.tab-btn').forEach(btn=>btn.addEventListener('click',()=>{
+    const category=btn.dataset.category;
+    if(category==='overview'){ openOverview(); return; }
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    if(category==='compare'){
+        compareMode=true;
+        statsContainer.classList.add('hidden');
+        compareContainer.classList.remove('hidden');
+        teamDropdown.classList.add('hidden');
+        fetchCompareStats();
+    } else {
+        compareMode=false;
+        currentCategory=category;
+        statsContainer.classList.remove('hidden');
+        compareContainer.classList.add('hidden');
+        teamDropdown.classList.remove('hidden');
+        displayStats(category);
+    }
+}));
+
+document.querySelectorAll('.compare-tab-btn').forEach(btn=>btn.addEventListener('click',()=>{
+    openCompareModal(btn.dataset.compareCategory);
+}));
+
+async function fetchJson(url) {
+    const r = await fetch(url);
+    const data = await r.json();
+    if(!r.ok || data.error) throw new Error(data.error || `Request failed (${r.status})`);
+    return data;
+}
+async function fetchTeamStats() {
+    setLoading(true);
+    try {
+        const data=await fetchJson(`/api/stats?team=${encodeURIComponent(currentTeam)}`);
+        allStats=Object.fromEntries(categories.map(c=>[c,data[c]]));
+        displayStats(currentCategory);
+        updateTime();
+    } catch(err) {
+        statsContainer.innerHTML=errorHtml(err.message);
+    } finally { setLoading(false); }
+}
+function displayStats(category) {
+    const data=allStats[category];
+    if(!data?.success){statsContainer.innerHTML=errorHtml('No data available.');return;}
+    const stats=data.stats.filter(s=>s.abbrev!=='M');
+    statsContainer.innerHTML=stats.map((s,i)=>{
+        const pct=rankPercentage(s.rank);
+        return `<div class="stat-card ${rankClass(s.rank)} animate-in" style="animation-delay:${i*.03}s">
+            <div class="stat-header"><span class="stat-abbrev">${s.abbrev}</span>${s.rank!=='-'?`<span class="rank-badge">${s.rank}</span>`:''}</div>
+            <div class="stat-value">${s.club}</div>
+            <div class="stat-name">${s.name}</div>
+            ${s.rank!=='-'?`<div class="rank-bar-container"><div class="rank-bar" style="width:${pct}%"></div></div><div class="rank-label">${rankLabel(s.rank)}</div>`:'<div class="rank-label no-rank">No ranking</div>'}
+        </div>`;
+    }).join('');
+}
+
+async function fetchCompareStats() {
+    setLoading(true);
+    try {
+        const t1=compare1.dataset.value, t2=compare2.dataset.value;
+        const [a,b]=await Promise.all([fetchJson(`/api/stats?team=${t1}`),fetchJson(`/api/stats?team=${t2}`)]);
+        compareStats1=Object.fromEntries(categories.map(c=>[c,a[c]]));
+        compareStats2=Object.fromEntries(categories.map(c=>[c,b[c]]));
+        const totals=calculateOverallWins();
+        document.getElementById('team1-score').textContent=totals.a;
+        document.getElementById('team2-score').textContent=totals.b;
+        updateTime();
+    } catch(err) {
+        document.getElementById('compare-stats').innerHTML=errorHtml(err.message);
+    } finally { setLoading(false); }
+}
+function winnerFor(abbrev,v1,v2){
+    if(v1===null||v2===null||v1===v2)return 'draw';
+    if(lowerIsBetter.has(abbrev))return v1<v2?'a':'b';
+    return v1>v2?'a':'b';
+}
+function calculateOverallWins(){
+    let a=0,b=0;
+    categories.forEach(cat=>{
+        const s1=compareStats1[cat]?.stats||[], s2=compareStats2[cat]?.stats||[];
+        s1.filter(s=>overallCompareMetrics.has(s.abbrev)).forEach(x=>{
+            const y=s2.find(z=>z.abbrev===x.abbrev); if(!y)return;
+            const w=winnerFor(x.abbrev,parseValue(x.club),parseValue(y.club));
+            if(w==='a')a++; if(w==='b')b++;
+        });
+    });
+    return {a,b};
+}
+
+const statModal=document.getElementById('stat-modal-overlay');
+function openCompareModal(category){
+    const d1=compareStats1[category], d2=compareStats2[category];
+    if(!d1?.success||!d2?.success)return;
+    const name1=compare1.querySelector('.compare-selected-team').textContent.trim();
+    const name2=compare2.querySelector('.compare-selected-team').textContent.trim();
+    document.getElementById('modal-team1-name').textContent=name1;
+    document.getElementById('modal-team2-name').textContent=name2;
+    document.getElementById('modal-category-pill').textContent=category.toUpperCase();
+    const s1=d1.stats.filter(s=>s.abbrev!=='M'), s2=d2.stats.filter(s=>s.abbrev!=='M');
+    let aw=0,bw=0;
+    document.getElementById('modal-stats-grid').innerHTML=s1.map(x=>{
+        const y=s2.find(z=>z.abbrev===x.abbrev)||{club:'-',rank:'-'};
+        const w=winnerFor(x.abbrev,parseValue(x.club),parseValue(y.club));
+        if(overallCompareMetrics.has(x.abbrev)){
+            if(w==='a')aw++;
+            if(w==='b')bw++;
+        }
+        const c1=w==='a'?'winner':w==='b'?'loser':'draw';
+        const c2=w==='b'?'winner':w==='a'?'loser':'draw';
+        return `<div class="modal-stat-item animate-in">
+            <div class="modal-val-cell left ${c1}"><div class="modal-val-inner"><span class="modal-main-val">${x.club}</span>${x.rank!=='-'?`<span class="modal-rank-pill">${x.rank}</span>`:''}</div></div>
+            <div class="modal-stat-info"><span class="modal-abbrev">${x.abbrev}</span><span class="modal-stat-name-text">${x.name}</span></div>
+            <div class="modal-val-cell right ${c2}"><div class="modal-val-inner"><span class="modal-main-val">${y.club}</span>${y.rank!=='-'?`<span class="modal-rank-pill">${y.rank}</span>`:''}</div></div>
+        </div>`;
+    }).join('');
+    document.getElementById('modal-wins-num1').textContent=aw;
+    document.getElementById('modal-wins-num2').textContent=bw;
+    statModal.classList.add('open'); document.body.style.overflow='hidden';
+}
+function closeOverlay(el){el.classList.remove('open');document.body.style.overflow='';}
+document.getElementById('modal-close-btn').addEventListener('click',()=>closeOverlay(statModal));
+statModal.addEventListener('click',e=>{if(e.target===statModal)closeOverlay(statModal)});
+
+const overviewOverlay=document.getElementById('overview-modal-overlay');
+const overviewSections=[
+    ['Attacking',[['G','attacking'],['G/M','attacking'],['POSS%','attacking'],['SH','attacking'],['SOT','attacking'],['SOT%','attacking']]],
+    ['Passing',[['PASS/M','passing'],['PASS%','passing'],['PASS-KEY','passing'],['CRS','passing']]],
+    ['Defending',[['TKL','defending'],['INT','defending'],['CLR','defending'],['DUEL%','defending']]],
+    ['Goalkeeping',[['GC','goalkeeping'],['GC/M','goalkeeping'],['SV/M','goalkeeping'],['CS','goalkeeping']]]
+];
+async function openOverview(){
+    document.getElementById('overview-team-name').textContent=selectedTeam.textContent.trim();
+    document.getElementById('overview-team-meta').textContent='';
+    document.getElementById('overview-stats-content').innerHTML=`<div class="overview-columns"><div class="overview-col">${overviewSections.slice(0,2).map(buildOverview).join('')}</div><div class="overview-col">${overviewSections.slice(2).map(buildOverview).join('')}</div></div>`;
+    overviewOverlay.classList.add('open'); document.body.style.overflow='hidden';
+    try{
+        const standings=await fetchJson('/api/standings');
+        const s=standings[currentTeam];
+        if(s)document.getElementById('overview-team-meta').textContent=`${ordinal(s.position)} · ${s.points} pts · ${s.played} played`;
+    }catch(e){}
+}
+function buildOverview(section){
+    const [label,items]=section;
+    let h=`<div class="overview-section-header">${label}</div>`;
+    items.forEach(([abbr,cat])=>{
+        const s=allStats[cat]?.stats?.find(x=>x.abbrev===abbr); if(!s)return;
+        h+=`<div class="overview-stat-row ${rankClass(s.rank)} animate-in"><span class="overview-name">${s.name}</span><div class="overview-value-block"><span class="overview-value">${s.club}</span>${s.rank!=='-'?`<span class="overview-rank-pos">${s.rank}</span>`:''}</div></div>`;
+    });
+    return h;
+}
+function ordinal(n){const v=n%100;const suf=(v>=11&&v<=13)?'th':({1:'st',2:'nd',3:'rd'}[n%10]||'th');return `${n}${suf}`}
+document.getElementById('overview-close-btn').addEventListener('click',()=>closeOverlay(overviewOverlay));
+overviewOverlay.addEventListener('click',e=>{if(e.target===overviewOverlay)closeOverlay(overviewOverlay)});
+
+const h2hOverlay=document.getElementById('h2h-modal-overlay');
+document.getElementById('h2h-btn').addEventListener('click',async()=>{
+    let t1=compare1.dataset.value,t2=compare2.dataset.value;
+    let n1=compare1.querySelector('.compare-selected-team').textContent.trim(),n2=compare2.querySelector('.compare-selected-team').textContent.trim();
+    if(t1===t2)return;
+    if(t2==='west-ham'){[t1,t2]=[t2,t1];[n1,n2]=[n2,n1];}
+    document.getElementById('h2h-team1-name').textContent=n1;
+    document.getElementById('h2h-team2-name').textContent=n2;
+    const body=document.getElementById('h2h-body');
+    body.innerHTML='<div class="h2h-loading"><div class="loading-spinner"></div><p>Fetching head-to-head records…</p></div>';
+    h2hOverlay.classList.add('open');document.body.style.overflow='hidden';
+    try{renderH2H(await fetchJson(`/api/h2h?team1=${t1}&team2=${t2}`));}
+    catch(e){body.innerHTML=`<div class="h2h-error">${e.message}</div>`;}
+});
+function renderH2H(data){
+    const body=document.getElementById('h2h-body');
+    const recent=(data.recent||[]).slice(0,5);
+    if(!recent.length){
+        body.innerHTML=`<div class="h2h-error">No previous meetings available from APIfootball for ${data.team1} and ${data.team2}.</div>`;
+        return;
+    }
+    body.innerHTML=`<div class="h2h-summary">
+        <div class="h2h-played">Last ${data.played} meeting${data.played===1?'':'s'}</div>
+        <div class="h2h-record">
+            <div class="h2h-stat-block h2h-win"><span class="h2h-stat-num">${data.overall.w}</span><span class="h2h-stat-label">${data.team1} Wins</span></div>
+            <div class="h2h-stat-block h2h-draw"><span class="h2h-stat-num">${data.overall.d}</span><span class="h2h-stat-label">Draws</span></div>
+            <div class="h2h-stat-block h2h-loss"><span class="h2h-stat-num">${data.overall.l}</span><span class="h2h-stat-label">${data.team2} Wins</span></div>
+        </div></div>
+        <div class="h2h-recent-header">Recent Meetings</div><div class="h2h-recent-list">${recent.map(m=>`<div class="h2h-match-row"><span class="h2h-match-date">${m.date}</span><div class="h2h-match-score"><span class="h2h-match-team">${m.home}</span><span class="h2h-score-box">${m.home_score} – ${m.away_score}</span><span class="h2h-match-team">${m.away}</span></div><span class="h2h-match-season">${m.season}</span></div>`).join('')}</div>`;
+}
+document.getElementById('h2h-close-btn').addEventListener('click',()=>closeOverlay(h2hOverlay));
+h2hOverlay.addEventListener('click',e=>{if(e.target===h2hOverlay)closeOverlay(h2hOverlay)});
+
+refreshBtn.addEventListener('click',()=>compareMode?fetchCompareStats():fetchTeamStats());
+document.getElementById('screenshot-btn').addEventListener('click',async()=>{
+    const canvas=await html2canvas(statsContainer,{backgroundColor:'#0F0F13',useCORS:true,scale:1});
+    const a=document.createElement('a');a.download=`${selectedTeam.textContent.trim().replace(/\s+/g,'-')}-stats.png`;a.href=canvas.toDataURL('image/png');a.click();
+});
+document.getElementById('modal-screenshot-btn').addEventListener('click',async()=>{
+    const panel=document.getElementById('stat-modal');
+    const canvas=await html2canvas(panel,{backgroundColor:'#0F0F13',useCORS:true,scale:1});
+    const a=document.createElement('a');a.download='championship-comparison.png';a.href=canvas.toDataURL('image/png');a.click();
+});
+document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){[statModal,overviewOverlay,h2hOverlay].forEach(closeOverlay);}
+});
+
+fetchTeamStats();
+</script>
+</body>
+</html>
