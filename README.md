@@ -2,6 +2,10 @@
 
 A free-data rebuild of the original Premier League / StatMuse dashboard for the 2026/27 EFL Championship.
 
+## Live deployment branch
+
+`championship-live` is the stable branch for the user-facing Championship dashboard. It is intentionally separate from `main`, which preserves the previous Premier League production deployment.
+
 ## Data source
 
 The dashboard uses the free API at APIfootball.com and Championship league ID `153`.
