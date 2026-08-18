@@ -105,7 +105,7 @@
             </div>
             <button type="button" class="opp-preview-shot">Save Match Preview</button>
         </div>
-        <div class="opp-preview-body"><div class="opp-preview-loading">Loading matchup context…</div></div>
+        <div class="opp-preview-body"><div class="opp-preview-loading">Open Compare to load matchup context…</div></div>
     `;
     matchupHeader.insertAdjacentElement('afterend', preview);
 
@@ -391,7 +391,7 @@
     });
 
     document.addEventListener('click', event => {
-        if (event.target.closest('.tab-compare')) scheduleRefresh(700);
+        if (event.target.closest('.tab-compare')) scheduleRefresh(1400);
         if (event.target.closest('.compare-dropdown-item')) scheduleRefresh();
     });
 
@@ -441,6 +441,4 @@
             shotBtn.textContent = originalText;
         }
     });
-
-    scheduleRefresh(900);
 })();
