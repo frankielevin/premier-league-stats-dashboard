@@ -24,6 +24,11 @@ KEY_STATS = (
     "Passes Accurate",
 )
 
+PLAYER_SHOT_FIELDS = (
+    "player_shots_total",
+    "player_shots_on_goal",
+)
+
 
 def _side_value(values, side):
     if not values:
@@ -39,7 +44,20 @@ def _compact(stats, side):
     }
 
 
-def _validation(stats, side):
+def _player_shot_totals(players, side):
+    team_players = [p for p in (players or []) if p.get("team_name") == side]
+    totals = {}
+    for field in PLAYER_SHOT_FIELDS:
+        values = []
+        for player in team_players:
+            value = core._to_number(player.get(field))
+            if value is not None:
+                values.append(value)
+        totals[field] = sum(values) if values else None
+    return {"players_found": len(team_players), **totals}
+
+
+def _validation(stats, side, player_shots=None):
     issues = []
     shots = _side_value(stats.get("Shots Total"), side)
     sot = _side_value(stats.get("Shots On Goal"), side)
@@ -66,6 +84,14 @@ def _validation(stats, side):
     missing = [name for name in required if not stats.get(name)]
     if missing:
         issues.append("missing_core_stats:" + ",".join(missing))
+
+    if player_shots:
+        player_total = player_shots.get("player_shots_total")
+        player_sot = player_shots.get("player_shots_on_goal")
+        if shots is not None and player_total is not None and abs(shots - player_total) > 1:
+            issues.append(f"team_shots_disagree_with_player_sum:{shots:g}_vs_{player_total:g}")
+        if sot is not None and player_sot is not None and abs(sot - player_sot) > 1:
+            issues.append(f"team_sot_disagree_with_player_sum:{sot:g}_vs_{player_sot:g}")
 
     return {"valid": not issues, "issues": issues}
 
@@ -98,13 +124,16 @@ def data_quality():
         side = "home" if (team_id and home_id == team_id) or core._slugify(match.get("match_hometeam_name", "")) == team_key else "away"
         match_id = str(match.get("match_id", ""))
         embedded = core._normalized_match_stats(match.get("statistics", []))
+        embedded_player_shots = _player_shot_totals(match.get("player_statistics", []), side)
 
         try:
             detail = core._fetch_match_statistics(match_id)
             dedicated = core._normalized_match_stats(detail.get("statistics", []))
+            dedicated_player_shots = _player_shot_totals(detail.get("player_statistics", []), side)
             dedicated_error = None
         except Exception as exc:
             dedicated = {}
+            dedicated_player_shots = {"players_found": 0, "player_shots_total": None, "player_shots_on_goal": None}
             dedicated_error = str(exc)
 
         output.append({
@@ -115,9 +144,11 @@ def data_quality():
             "score": f"{match.get('match_hometeam_ft_score', match.get('match_hometeam_score', ''))}-{match.get('match_awayteam_ft_score', match.get('match_awayteam_score', ''))}",
             "team_side": side,
             "embedded": _compact(embedded, side),
+            "embedded_player_shots": embedded_player_shots,
             "dedicated": _compact(dedicated, side),
-            "embedded_validation": _validation(embedded, side),
-            "dedicated_validation": _validation(dedicated, side),
+            "dedicated_player_shots": dedicated_player_shots,
+            "embedded_validation": _validation(embedded, side, embedded_player_shots),
+            "dedicated_validation": _validation(dedicated, side, dedicated_player_shots),
             "dedicated_error": dedicated_error,
         })
 
