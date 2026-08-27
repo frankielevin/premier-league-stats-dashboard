@@ -28,46 +28,8 @@
   ],
   "routes": [
     {
-      "src": "/api/h2h",
-      "dest": "h2h.py",
-      "headers": {
-        "Cache-Control": "public, s-maxage=21600, stale-while-revalidate=86400"
-      }
-    },
-    {
-      "src": "/api/leaderboard",
-      "dest": "leaderboard.py",
-      "headers": {
-        "Cache-Control": "public, s-maxage=900, stale-while-revalidate=21600"
-      }
-    },
-    {
-      "src": "/api/form-fixtures",
-      "dest": "form_fixtures.py",
-      "headers": {
-        "Cache-Control": "public, s-maxage=900, stale-while-revalidate=21600"
-      }
-    },
-    {
-      "src": "/api/stats",
-      "dest": "app.py",
-      "headers": {
-        "Cache-Control": "public, s-maxage=900, stale-while-revalidate=21600"
-      }
-    },
-    {
-      "src": "/api/stats/(.*)",
-      "dest": "app.py",
-      "headers": {
-        "Cache-Control": "public, s-maxage=900, stale-while-revalidate=21600"
-      }
-    },
-    {
-      "src": "/api/standings",
-      "dest": "standings.py",
-      "headers": {
-        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600"
-      }
+      "src": "/api/(.*)",
+      "dest": "https://premier-league-stats-dashboard.vercel.app/championship/api/$1"
     },
     {
       "src": "/(.*)",
